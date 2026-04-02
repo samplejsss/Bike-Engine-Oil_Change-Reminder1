@@ -291,7 +291,7 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className={`glass rounded-2xl border p-8 flex flex-col items-center justify-center gap-6 ${
+              className={`glass rounded-2xl border p-8 flex flex-col items-center justify-center gap-6 h-fit self-start sticky top-28 lg:top-32 ${
                 isDue ? "border-red-500/30 danger-glow" : "border-white/8"
               }`}
             >
@@ -302,6 +302,11 @@ export default function DashboardPage() {
                 limit={oilChangeLimit}
                 danger={isDue}
               />
+              
+              <div className="w-full mt-2 p-5 rounded-2xl bg-slate-900/50 border border-white/5 flex justify-between items-center">
+                 <span className="text-slate-400 text-sm font-medium">Km since last change</span>
+                 <span className="text-white font-mono text-lg font-bold">{kmSinceReset.toFixed(1)} km</span>
+              </div>
             </motion.div>
 
             {/* Right column */}
@@ -525,49 +530,7 @@ export default function DashboardPage() {
                 )}
               </motion.div>
 
-              {/* Quick stats */}
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 }}
-                className="glass rounded-2xl p-6 border border-white/8"
-              >
-                <h3 className="font-semibold text-white mb-4">Current Oil Cycle</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 text-sm">Km since last change</span>
-                    <span className="text-white font-mono font-semibold">{kmSinceReset.toFixed(1)} km</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-400 text-sm">Oil used</span>
-                    <span
-                      className={`font-mono font-semibold ${
-                        oilUsedPct > 90 ? "text-red-400" : oilUsedPct > 70 ? "text-yellow-400" : "text-green-400"
-                      }`}
-                    >
-                      {oilUsedPct.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, oilUsedPct)}%` }}
-                      transition={{ duration: 1, ease: "easeInOut", delay: 0.6 }}
-                      className={`h-full rounded-full ${
-                        isDue
-                          ? "bg-gradient-to-r from-red-500 to-orange-500"
-                          : oilUsedPct > 70
-                          ? "bg-gradient-to-r from-yellow-500 to-orange-500"
-                          : "bg-gradient-to-r from-purple-500 to-blue-500"
-                      }`}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>0 km</span>
-                    <span>{oilChangeLimit.toLocaleString()} km</span>
-                  </div>
-                </div>
-              </motion.div>
+
             </div>
           </div>
         </div>
