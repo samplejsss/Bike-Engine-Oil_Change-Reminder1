@@ -2,17 +2,22 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { collection, query, where, orderBy, getDocs, limit as fbLimit } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
-import { MapPin, Calendar, Clock, Bike, Loader2, ArrowUpRight, History as HistoryIcon } from "lucide-react";
+import { MapPin, Calendar, Clock, Bike, Loader2, Edit2, Trash2, Check, X as XIcon, History as HistoryIcon } from "lucide-react";
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [rides, setRides] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+
+  // Edit / Delete states
+  const [editingId, setEditingId] = useState(null);
+  const [editKm, setEditKm] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -28,8 +33,8 @@ export default function HistoryPage() {
       );
       const querySnapshot = await getDocs(q);
       const fetched = [];
-      querySnapshot.forEach((doc) => {
-        fetched.push({ id: doc.id, ...doc.data() });
+      querySnapshot.forEach((docSnap) => {
+        fetched.push({ id: docSnap.id, ...docSnap.data() });
       });
       // Sort locally to avoid Firebase composite index requirement
       fetched.sort((a, b) => {
@@ -48,6 +53,42 @@ export default function HistoryPage() {
   useEffect(() => {
     if (user) fetchHistory();
   }, [user, fetchHistory]);
+
+  const handleDelete = async (rideId, rideKm) => {
+    if (!confirm("Are you sure you want to delete this log?")) return;
+    setActionLoading(rideId);
+    try {
+      await deleteDoc(doc(db, "rides", rideId));
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, { totalKm: increment(-rideKm) });
+      setRides((prev) => prev.filter((r) => r.id !== rideId));
+    } catch (err) {
+      console.error("Delete error:", err);
+      alert("Failed to delete ride.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleUpdate = async (rideId, oldKm) => {
+    const newKmVal = parseFloat(editKm);
+    if (!newKmVal || newKmVal <= 0) return alert("Invalid KM value");
+    
+    setActionLoading(rideId);
+    try {
+      const diff = newKmVal - oldKm;
+      await updateDoc(doc(db, "rides", rideId), { km: newKmVal });
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, { totalKm: increment(diff) });
+      setRides((prev) => prev.map((r) => r.id === rideId ? { ...r, km: newKmVal } : r));
+      setEditingId(null);
+    } catch (err) {
+      console.error("Update error:", err);
+      alert("Failed to update ride.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   if (authLoading || dataLoading) {
     return (
@@ -136,21 +177,56 @@ export default function HistoryPage() {
                               minute: "2-digit",
                             })}
                           </p>
-                          <p className="text-white font-semibold">
+                          <p className="text-white font-semibold flex items-center gap-2">
                             Logged daily running
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6 self-start sm:self-center ml-16 sm:ml-0">
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-purple-400 flex items-center gap-1 justify-end">
-                            {ride.km.toFixed(1)} <span className="text-sm font-medium text-slate-500">km</span>
-                          </p>
-                        </div>
-                        <div className="w-10 h-10 rounded-full glass border border-white/10 flex items-center justify-center group-hover:bg-purple-500/20 group-hover:text-purple-300 text-slate-500 transition-colors shrink-0">
-                          <ArrowUpRight size={18} />
-                        </div>
+                      <div className="flex items-center gap-2 sm:gap-4 self-start sm:self-center ml-16 sm:ml-0">
+                        {editingId === ride.id ? (
+                           <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-2xl border border-white/10">
+                             <input 
+                               type="number" 
+                               className="glass-input w-20 sm:w-24 px-2 py-1 h-9 text-sm text-right font-mono" 
+                               value={editKm} 
+                               onChange={e => setEditKm(e.target.value)} 
+                               step="0.1" 
+                               autoFocus
+                             />
+                             <button onClick={() => handleUpdate(ride.id, ride.km)} disabled={actionLoading === ride.id} className="w-9 h-9 rounded-xl glass border border-green-500/20 text-green-400 flex items-center justify-center hover:bg-green-500/10 transition-colors">
+                               {actionLoading === ride.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                             </button>
+                             <button onClick={() => setEditingId(null)} disabled={actionLoading === ride.id} className="w-9 h-9 rounded-xl glass border border-slate-500/20 text-slate-400 flex items-center justify-center hover:bg-slate-500/10 transition-colors">
+                               <XIcon size={16} />
+                             </button>
+                           </div>
+                        ) : (
+                           <>
+                             <div className="text-right mr-2">
+                               <p className="text-xl sm:text-2xl font-bold text-purple-400 flex items-center justify-end gap-1">
+                                 {ride.km.toFixed(1)} <span className="text-sm font-medium text-slate-500">km</span>
+                               </p>
+                             </div>
+                             <div className="flex items-center gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                               <button 
+                                 onClick={() => { setEditingId(ride.id); setEditKm(ride.km.toString()); }} 
+                                 className="w-10 h-10 rounded-full glass border border-white/10 flex items-center justify-center hover:bg-blue-500/20 hover:border-blue-500/30 text-blue-400 transition-all shrink-0"
+                                 title="Edit ride"
+                               >
+                                 <Edit2 size={16} />
+                               </button>
+                               <button 
+                                 onClick={() => handleDelete(ride.id, ride.km)} 
+                                 disabled={actionLoading === ride.id} 
+                                 className="w-10 h-10 rounded-full glass border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/30 text-red-400 transition-all shrink-0"
+                                 title="Delete ride"
+                               >
+                                 {actionLoading === ride.id ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                               </button>
+                             </div>
+                           </>
+                        )}
                       </div>
                     </motion.div>
                   );
