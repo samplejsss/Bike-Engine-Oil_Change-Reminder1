@@ -6,7 +6,7 @@ import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPhone = "" }) {
+export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPhone = "", currentStats }) {
   const { user } = useAuth();
   const [km, setKm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -46,15 +46,28 @@ export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPh
       setSuccess(true);
       if (onRideAdded) onRideAdded();
       
-      if (mechanicPhone) {
-        const text = `Hey! I just logged a daily run of ${kmVal} km using BikeCare Tracker. Keep an eye out for my next oil change limit!`;
+      if (mechanicPhone && currentStats) {
+        const newTotal = currentStats.totalKm + kmVal;
+        const newSinceReset = newTotal - currentStats.lastResetKm;
+        const newRemaining = currentStats.oilChangeLimit - newSinceReset;
+        
+        const details = [
+           `🏍️ *BikeCare Tracker Update*`,
+           `I just logged a ride of *${kmVal} km*.`,
+           ``,
+           `📊 *Current Stats:*`,
+           `- Total KM: ${newTotal.toFixed(1)} km`,
+           `- Oil Change Limit: ${currentStats.oilChangeLimit.toLocaleString()} km`,
+           `- Oil Change Due In: ${newRemaining > 0 ? newRemaining.toFixed(1) + " km" : "OVERDUE ⚠️"}`
+        ].join('\n');
+
         const cleanPhone = mechanicPhone.replace(/\D/g, "");
         if (cleanPhone) {
           // Attempt automatic WhatsApp redirect
           try {
              const a = document.createElement("a");
              a.target = "_blank";
-             a.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+             a.href = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(details)}`;
              a.click();
           } catch(e) {
              console.log("Popup blocked or error", e);

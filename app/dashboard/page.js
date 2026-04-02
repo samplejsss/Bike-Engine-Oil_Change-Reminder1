@@ -307,7 +307,12 @@ export default function DashboardPage() {
             {/* Right column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Add ride */}
-              <DailyRideInput onRideAdded={fetchUserData} quickAddKm={quickAddKm} mechanicPhone={mechanicPhone} />
+              <DailyRideInput 
+                onRideAdded={fetchUserData} 
+                quickAddKm={quickAddKm} 
+                mechanicPhone={mechanicPhone} 
+                currentStats={{ totalKm, lastResetKm, oilChangeLimit }}
+              />
 
               {/* Oil limit setting */}
               <motion.div
