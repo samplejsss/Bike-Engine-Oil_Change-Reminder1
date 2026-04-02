@@ -6,7 +6,7 @@ import { db, auth } from "@/lib/firebase";
 import { collection, addDoc, doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
 
-export default function DailyRideInput({ onRideAdded }) {
+export default function DailyRideInput({ onRideAdded, quickAddKm = 0 }) {
   const { user } = useAuth();
   const [km, setKm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,10 @@ export default function DailyRideInput({ onRideAdded }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const kmVal = parseFloat(km);
+    await handleAddRide(parseFloat(km));
+  };
+
+  const handleAddRide = async (kmVal) => {
     if (!kmVal || kmVal <= 0) {
       setError("Please enter a valid km value.");
       return;
@@ -122,6 +125,23 @@ export default function DailyRideInput({ onRideAdded }) {
           {loading ? "Adding..." : "Add Ride"}
         </motion.button>
       </form>
+
+      {quickAddKm > 0 && (
+        <div className="mt-5 pt-5 border-t border-white/10">
+          <p className="text-xs text-slate-500 mb-3">Quick Add (Daily Commute)</p>
+          <motion.button
+            type="button"
+            onClick={() => handleAddRide(quickAddKm)}
+            disabled={loading}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
+            className="w-full glass border border-purple-500/20 text-purple-300 font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 hover:bg-purple-500/10 transition-all disabled:opacity-60"
+          >
+            <PlusCircle size={16} />
+            Add {quickAddKm} km instantly
+          </motion.button>
+        </div>
+      )}
     </motion.div>
   );
 }

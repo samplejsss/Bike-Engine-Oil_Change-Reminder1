@@ -33,6 +33,9 @@ export default function DashboardPage() {
   const [dateEditing, setDateEditing] = useState(false);
   const [newDate, setNewDate] = useState("");
   const [savingDate, setSavingDate] = useState(false);
+  const [quickAddEditing, setQuickAddEditing] = useState(false);
+  const [newQuickAdd, setNewQuickAdd] = useState("");
+  const [savingQuickAdd, setSavingQuickAdd] = useState(false);
 
   const fetchUserData = useCallback(async () => {
     if (!user) return;
@@ -127,6 +130,23 @@ export default function DashboardPage() {
     }
   };
 
+  const handleQuickAddSave = async () => {
+    const val = parseFloat(newQuickAdd);
+    if (!val || val <= 0) return;
+    setSavingQuickAdd(true);
+    try {
+      const ref = doc(db, "users", user.uid);
+      await updateDoc(ref, { quickAddKm: val });
+      await fetchUserData();
+      setQuickAddEditing(false);
+      setNewQuickAdd("");
+    } catch (err) {
+      console.error("Quick add update error:", err);
+    } finally {
+      setSavingQuickAdd(false);
+    }
+  };
+
   if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -143,7 +163,7 @@ export default function DashboardPage() {
 
   if (!user || !userData) return null;
 
-  const { totalKm = 0, oilChangeLimit = 2000, lastResetKm = 0, lastOilChangeDate } = userData;
+  const { totalKm = 0, oilChangeLimit = 2000, lastResetKm = 0, lastOilChangeDate, quickAddKm = 0 } = userData;
   const kmSinceReset = totalKm - lastResetKm;
   const remainingKm = oilChangeLimit - kmSinceReset;
   const oilUsedPct = Math.min(100, (kmSinceReset / oilChangeLimit) * 100);
@@ -268,7 +288,7 @@ export default function DashboardPage() {
             {/* Right column */}
             <div className="lg:col-span-2 space-y-6">
               {/* Add ride */}
-              <DailyRideInput onRideAdded={fetchUserData} />
+              <DailyRideInput onRideAdded={fetchUserData} quickAddKm={quickAddKm} />
 
               {/* Oil limit setting */}
               <motion.div
@@ -370,6 +390,60 @@ export default function DashboardPage() {
                       className="px-5 py-2 rounded-xl btn-glow text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
                     >
                       {savingDate ? <Loader2 size={14} className="animate-spin" /> : "Save"}
+                    </motion.button>
+                  </motion.div>
+                )}
+              </motion.div>
+
+              {/* Quick Add KM setting */}
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+                className="glass rounded-2xl p-6 border border-white/8"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center">
+                      <Bike size={18} className="text-orange-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white">Daily Commute (Quick Add)</h3>
+                      <p className="text-xs text-slate-500">
+                        Current: {quickAddKm > 0 ? `${quickAddKm} km` : "Not set"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => { setQuickAddEditing(!quickAddEditing); setNewQuickAdd(""); }}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                  >
+                    {quickAddEditing ? "Cancel" : "Edit"}
+                  </button>
+                </div>
+                {quickAddEditing && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="flex gap-3"
+                  >
+                    <input
+                      type="number"
+                      value={newQuickAdd}
+                      onChange={(e) => setNewQuickAdd(e.target.value)}
+                      placeholder={`e.g. 15`}
+                      className="glass-input flex-1"
+                      min="0.1"
+                      step="0.1"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleQuickAddSave}
+                      disabled={savingQuickAdd}
+                      className="px-5 py-2 rounded-xl btn-glow text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
+                    >
+                      {savingQuickAdd ? <Loader2 size={14} className="animate-spin" /> : "Save"}
                     </motion.button>
                   </motion.div>
                 )}

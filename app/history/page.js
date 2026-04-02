@@ -24,16 +24,20 @@ export default function HistoryPage() {
       setDataLoading(true);
       const q = query(
         collection(db, "rides"),
-        where("userId", "==", user.uid),
-        orderBy("date", "desc"),
-        fbLimit(50)
+        where("userId", "==", user.uid)
       );
       const querySnapshot = await getDocs(q);
       const fetched = [];
       querySnapshot.forEach((doc) => {
         fetched.push({ id: doc.id, ...doc.data() });
       });
-      setRides(fetched);
+      // Sort locally to avoid Firebase composite index requirement
+      fetched.sort((a, b) => {
+        const timeA = a.date?.seconds || 0;
+        const timeB = b.date?.seconds || 0;
+        return timeB - timeA;
+      });
+      setRides(fetched.slice(0, 100)); // Limit to last 100 on client
     } catch (err) {
       console.error("Error fetching ride history:", err);
     } finally {
