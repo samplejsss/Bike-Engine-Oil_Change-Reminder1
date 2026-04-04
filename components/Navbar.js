@@ -29,119 +29,147 @@ export default function Navbar() {
     : [];
 
   return (
-    <motion.nav
-      initial={{ y: -60, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-      className="fixed top-0 left-0 right-0 z-50"
-    >
-      <div className="glass border-b border-white/5 backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-lg btn-glow flex items-center justify-center">
-                  <Bike className="text-white" size={18} />
+    <>
+      <motion.nav
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
+      >
+        <div className="glass border-b border-white/5 backdrop-blur-2xl pointer-events-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              {/* Logo */}
+              <Link href="/" className="flex items-center gap-2 group">
+                <div className="relative">
+                  <div className="w-8 h-8 rounded-lg btn-glow flex items-center justify-center">
+                    <Bike className="text-white" size={18} />
+                  </div>
+                  <div className="absolute inset-0 rounded-lg bg-purple-500/30 blur-md group-hover:blur-lg transition-all" />
                 </div>
-                <div className="absolute inset-0 rounded-lg bg-purple-500/30 blur-md group-hover:blur-lg transition-all" />
-              </div>
-              <span className="font-bold text-lg gradient-text">BikeCare</span>
-            </Link>
+                <span className="font-bold text-lg gradient-text">BikeCare</span>
+              </Link>
 
-            {/* Desktop Links */}
-            <div className="hidden md:flex items-center gap-1">
-              {navLinks.map(({ href, label, icon: Icon }) => (
+              {/* Desktop Links */}
+              <div className="hidden md:flex items-center gap-1">
+                {navLinks.map(({ href, label, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
+                      pathname === href
+                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    <Icon size={15} />
+                    {label}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Auth Buttons */}
+              <div className="hidden md:flex items-center gap-3">
+                {user ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold shadow-lg">
+                      {user.email?.[0]?.toUpperCase()}
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300"
+                    >
+                      <LogOut size={15} /> Logout
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium btn-glow text-white"
+                  >
+                    <LogIn size={15} /> Login
+                  </Link>
+                )}
+              </div>
+
+              {/* Mobile menu toggle */}
+              <button
+                className="md:hidden text-slate-400 hover:text-white p-2"
+                onClick={() => setMobileOpen(!mobileOpen)}
+              >
+                {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile menu */}
+          {mobileOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden border-t border-white/5 px-4 py-4 space-y-2 glass"
+            >
+              <div className="space-y-1 mb-4">
+                {user ? (
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all font-medium"
+                  >
+                    <LogOut size={18} /> Logout
+                  </button>
+                ) : (
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-sm btn-glow text-white font-medium"
+                  >
+                    <LogIn size={18} /> Login
+                  </Link>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </motion.nav>
+
+      {/* Modern Bottom Navbar (Mobile Only) */}
+      {user && (
+        <div className="md:hidden fixed bottom-6 left-4 right-4 z-50 pointer-events-none">
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
+            className="glass rounded-[24px] flex items-center justify-around px-2 py-2 shadow-2xl border border-white/10 bg-black/40 backdrop-blur-3xl pointer-events-auto"
+          >
+            {navLinks.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href;
+              return (
                 <Link
                   key={href}
                   href={href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${
-                    pathname === href
-                      ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-white/5"
-                  }`}
+                  className="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 relative group"
                 >
-                  <Icon size={15} />
-                  {label}
-                </Link>
-              ))}
-            </div>
-
-            {/* Auth Buttons */}
-            <div className="hidden md:flex items-center gap-3">
-              {user ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold">
-                    {user.email?.[0]?.toUpperCase()}
+                  {isActive && (
+                    <motion.div 
+                      layoutId="bottomNavIndicator"
+                      className="absolute inset-0 bg-gradient-to-tr from-purple-500/20 to-blue-500/20 rounded-[20px] border border-white/5"
+                      initial={false}
+                      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <div className={`relative z-10 p-1.5 rounded-xl transition-all duration-300 ${isActive ? 'text-purple-300 transform scale-110' : 'text-slate-400 group-hover:text-white group-hover:scale-105'}`}>
+                    <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-300"
-                  >
-                    <LogOut size={15} /> Logout
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium btn-glow text-white"
-                >
-                  <LogIn size={15} /> Login
+                  <span className={`text-[10px] font-semibold tracking-wide relative z-10 transition-colors duration-300 ${isActive ? 'text-purple-300' : 'text-slate-500'}`}>
+                    {label}
+                  </span>
                 </Link>
-              )}
-            </div>
-
-            {/* Mobile menu toggle */}
-            <button
-              className="md:hidden text-slate-400 hover:text-white p-2"
-              onClick={() => setMobileOpen(!mobileOpen)}
-            >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile menu */}
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-white/5 px-4 py-4 space-y-2"
-          >
-            {navLinks.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                  pathname === href
-                    ? "bg-purple-500/20 text-purple-300"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
-                }`}
-              >
-                <Icon size={16} /> {label}
-              </Link>
-            ))}
-            {user ? (
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-red-400 hover:bg-red-500/10 transition-all"
-              >
-                <LogOut size={16} /> Logout
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm btn-glow text-white font-medium"
-              >
-                <LogIn size={16} /> Login
-              </Link>
-            )}
+              );
+            })}
           </motion.div>
-        )}
-      </div>
-    </motion.nav>
+        </div>
+      )}
+    </>
   );
 }

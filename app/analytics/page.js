@@ -34,8 +34,7 @@ export default function AnalyticsPage() {
         // Fetch Rides
         const qRides = query(
           collection(db, "rides"),
-          where("userId", "==", user.uid),
-          orderBy("date", "desc")
+          where("userId", "==", user.uid)
         );
         const rideSnaps = await getDocs(qRides);
         const rData = rideSnaps.docs.map(d => ({
@@ -48,8 +47,7 @@ export default function AnalyticsPage() {
         // Fetch Expenses
         const qExp = query(
           collection(db, "expenses"),
-          where("userId", "==", user.uid),
-          orderBy("date", "desc")
+          where("userId", "==", user.uid)
         );
         const expSnaps = await getDocs(qExp);
         const eData = expSnaps.docs.map(d => ({
