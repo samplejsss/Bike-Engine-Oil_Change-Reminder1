@@ -6,13 +6,14 @@ import * as htmlToImage from "html-to-image";
 import { jsPDF } from "jspdf";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { buildFuelEntriesWithEfficiency, getRecentAverageKmpl } from "@/lib/fuelMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import {
-  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from "recharts";
-import { Loader2, TrendingUp, IndianRupee, MapPin, Image as ImageIcon, FileText, FileSpreadsheet, Activity, Fuel, Wrench, Package, Tag } from "lucide-react";
+import { Loader2, TrendingUp, IndianRupee, MapPin, Image as ImageIcon, FileText, FileSpreadsheet, Activity, Fuel, Tag } from "lucide-react";
 import { format, subDays, isSameDay, startOfMonth, startOfDay } from "date-fns";
 
 const EXPENSE_COLORS = {
@@ -23,20 +24,13 @@ const EXPENSE_COLORS = {
   Other: "#64748b",
 };
 
-const EXPENSE_ICONS = {
-  Fuel: Fuel,
-  Service: Wrench,
-  Parts: Package,
-  Accessories: Tag,
-  Other: Tag,
-};
-
 export default function AnalyticsPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   
   const [rides, setRides] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [fuelLogs, setFuelLogs] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("7");
   const dashboardRef = useRef(null);
@@ -68,6 +62,11 @@ export default function AnalyticsPage() {
           dateObj: d.data().date?.toDate() || new Date()
         }));
         setExpenses(eData);
+
+        const qFuel = query(collection(db, "users", user.uid, "fuelLogs"));
+        const fuelSnaps = await getDocs(qFuel);
+        const fData = fuelSnaps.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setFuelLogs(fData);
       } catch (err) {
         console.error("Error fetching analytics:", err);
       } finally {
@@ -149,6 +148,15 @@ export default function AnalyticsPage() {
     return r.dateObj >= cutoff;
   }).length;
   const avgKmPerRide = totalRides > 0 ? totalKmFiltered / totalRides : 0;
+  const fuelEntries = buildFuelEntriesWithEfficiency(fuelLogs);
+  const avgFuelEfficiency = getRecentAverageKmpl(fuelEntries, 3);
+  const fuelTrendData = fuelEntries
+    .filter((entry) => typeof entry.kmpl === "number")
+    .map((entry) => ({
+      date: format(entry.dateObj, "MMM dd"),
+      kmpl: Number(entry.kmpl.toFixed(2)),
+      timestamp: entry.dateObj.getTime(),
+    }));
 
   const handleDownloadCsv = () => {
     let csv = "Date,Type,Value(KM/Rupees),Category\n";
@@ -256,13 +264,14 @@ export default function AnalyticsPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6"
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6"
           >
             {[
               { label: "Rides Logged", value: totalRides, unit: "rides", icon: Activity, color: "text-purple-400", bg: "bg-purple-500/10" },
               { label: "Distance", value: totalKmFiltered.toFixed(1), unit: "km", icon: MapPin, color: "text-blue-400", bg: "bg-blue-500/10" },
               { label: "Total Spent", value: `₹${totalExpenseFiltered.toLocaleString()}`, unit: "", icon: IndianRupee, color: "text-emerald-400", bg: "bg-emerald-500/10" },
               { label: "Avg per Ride", value: avgKmPerRide.toFixed(1), unit: "km", icon: TrendingUp, color: "text-cyan-400", bg: "bg-cyan-500/10" },
+              { label: "Fuel Efficiency", value: avgFuelEfficiency ? avgFuelEfficiency.toFixed(2) : "--", unit: avgFuelEfficiency ? "km/L" : "", icon: Fuel, color: "text-amber-400", bg: "bg-amber-500/10" },
             ].map((s, i) => (
               <motion.div
                 key={i}
@@ -347,6 +356,42 @@ export default function AnalyticsPage() {
                 </div>
               </motion.div>
             </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="glass rounded-2xl p-6 border border-white/10"
+            >
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                  <Fuel className="text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm">Fuel Efficiency Trend</p>
+                  <p className="text-3xl font-bold text-white">
+                    {avgFuelEfficiency ? `${avgFuelEfficiency.toFixed(2)} km/L` : "--"}
+                  </p>
+                </div>
+              </div>
+              <div className="h-64 w-full">
+                {fuelTrendData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={fuelTrendData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={12} />
+                      <YAxis stroke="#94a3b8" fontSize={12} />
+                      <RechartsTooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px' }} itemStyle={{ color: '#f59e0b' }} />
+                      <Line type="monotone" dataKey="kmpl" stroke="#f59e0b" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-500 text-sm">
+                    Add at least 2 fuel logs to see efficiency trend.
+                  </div>
+                )}
+              </div>
+            </motion.div>
 
             {/* ✨ NEW: Expense Category Breakdown */}
             {categoryData.length > 0 && (

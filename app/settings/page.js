@@ -22,6 +22,7 @@ export default function SettingsPage() {
     autoMessageEnabled: true,
     preferredMethod: "wa",
     lastOilChangeDate: "",
+    fuelEfficiencyThreshold: 35,
   });
 
   useEffect(() => {
@@ -43,6 +44,7 @@ export default function SettingsPage() {
             autoMessageEnabled: d.autoMessageEnabled ?? true,
             preferredMethod: d.preferredMethod || "wa",
             lastOilChangeDate: d.lastOilChangeDate ? new Date(d.lastOilChangeDate.seconds ? d.lastOilChangeDate.seconds * 1000 : (typeof d.lastOilChangeDate.toMillis === 'function' ? d.lastOilChangeDate.toMillis() : d.lastOilChangeDate)).toISOString().split('T')[0] : "",
+            fuelEfficiencyThreshold: d.fuelEfficiencyThreshold ?? 35,
           });
         }
       } catch(err) {
@@ -66,6 +68,7 @@ export default function SettingsPage() {
         mechanicPhone: formData.mechanicPhone,
         autoMessageEnabled: formData.autoMessageEnabled,
         preferredMethod: formData.preferredMethod,
+        fuelEfficiencyThreshold: Number(formData.fuelEfficiencyThreshold),
       };
 
       if (formData.lastOilChangeDate) {
@@ -147,6 +150,18 @@ export default function SettingsPage() {
                            onChange={e => setFormData({...formData, lastOilChangeDate: e.target.value})}
                            className="glass-input w-full md:w-1/2"
                          />
+                      </div>
+                      <div>
+                         <label className="block text-sm font-medium text-slate-400 mb-1">Low Fuel Efficiency Alert (km/L)</label>
+                         <input
+                           type="number"
+                           value={formData.fuelEfficiencyThreshold}
+                           onChange={e => setFormData({...formData, fuelEfficiencyThreshold: e.target.value})}
+                           className="glass-input w-full"
+                           min="1"
+                           step="0.1"
+                         />
+                         <p className="text-xs text-slate-500 mt-1">Dashboard shows a warning when latest fuel efficiency falls below this value.</p>
                       </div>
                    </div>
                 </div>

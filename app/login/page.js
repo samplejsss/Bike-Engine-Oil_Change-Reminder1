@@ -32,6 +32,7 @@ export default function LoginPage() {
         totalKm: 0,
         oilChangeLimit: 2000,
         lastResetKm: 0,
+        fuelEfficiencyThreshold: 35,
         createdAt: serverTimestamp(),
       });
     }
@@ -72,7 +73,7 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       await createUserDoc(result.user);
       router.push("/dashboard");
-    } catch (err) {
+    } catch {
       setError("Google sign-in failed. Please try again.");
     } finally {
       setGoogleLoading(false);

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import { Bike, LayoutDashboard, History as HistoryIcon, LogOut, LogIn, Menu, X, TrendingUp, Settings, Sparkles } from "lucide-react";
+import { Bike, LayoutDashboard, History as HistoryIcon, LogOut, LogIn, Menu, X, TrendingUp, Settings, Sparkles, Fuel } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
@@ -23,6 +23,7 @@ export default function Navbar() {
     ? [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/history", label: "History", icon: HistoryIcon },
+        { href: "/fuel", label: "Fuel", icon: Fuel },
         { href: "/analytics", label: "Analytics", icon: TrendingUp },
         { href: "/advisor", label: "Advisor", icon: Sparkles },
         { href: "/settings", label: "Settings", icon: Settings },

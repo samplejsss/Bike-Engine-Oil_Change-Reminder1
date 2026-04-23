@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { buildFuelEntriesWithEfficiency, getFuelCostThisMonth, getLatestKmpl, getRecentAverageKmpl } from "@/lib/fuelMetrics";
 import { useAuth } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import StatCard from "@/components/StatCard";
@@ -23,6 +24,9 @@ import {
   Settings2,
   Loader2,
   RefreshCw,
+  Fuel,
+  AlertTriangle,
+  IndianRupee,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -34,6 +38,7 @@ export default function DashboardPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [avgDailyKm, setAvgDailyKm] = useState(0);
   const [totalKmFromHistory, setTotalKmFromHistory] = useState(0);
+  const [fuelEntries, setFuelEntries] = useState([]);
 
 
   const fetchUserData = useCallback(async () => {
@@ -51,6 +56,7 @@ export default function DashboardPage() {
           lastOdometerReading: 953.3,
           oilChangeLimit: 2000,
           lastResetKm: 0,
+          fuelEfficiencyThreshold: 35,
           createdAt: serverTimestamp(),
         };
         await setDoc(ref, defaults);
@@ -91,6 +97,11 @@ export default function DashboardPage() {
       let sum = 0;
       snap.forEach(d => { sum += d.data().km; });
       setAvgDailyKm(sum / 14);
+
+      const fuelLogsQuery = query(collection(db, "users", user.uid, "fuelLogs"));
+      const fuelLogsSnap = await getDocs(fuelLogsQuery);
+      const logs = fuelLogsSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+      setFuelEntries(buildFuelEntriesWithEfficiency(logs));
     } catch(err) {
       console.error(err);
     }
@@ -165,7 +176,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { oilChangeLimit = 2000, lastResetKm = 0, lastOilChangeDate, quickAddKm = 0, mechanicPhone = "" } = userData;
+  const { oilChangeLimit = 2000, lastResetKm = 0, lastOilChangeDate, quickAddKm = 0, mechanicPhone = "", fuelEfficiencyThreshold = 35 } = userData;
   const totalKm = totalKmFromHistory;
   const kmSinceReset = totalKm - lastResetKm;
   const remainingKm = Math.max(0, oilChangeLimit - kmSinceReset);
@@ -187,6 +198,17 @@ export default function DashboardPage() {
         year: "numeric",
       })
     : "Not recorded";
+
+  const avgFuelEfficiency = getRecentAverageKmpl(fuelEntries, 3);
+  const latestFuelEfficiency = getLatestKmpl(fuelEntries);
+  const monthlyFuelCost = getFuelCostThisMonth(fuelEntries);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthlyDistance = fuelEntries
+    .filter((entry) => entry.dateObj >= monthStart)
+    .reduce((sum, entry) => sum + (entry.distanceSinceLast || 0), 0);
+  const costPerKm = monthlyDistance > 0 ? monthlyFuelCost / monthlyDistance : null;
+  const isEfficiencyLow = typeof latestFuelEfficiency === "number" && latestFuelEfficiency < Number(fuelEfficiencyThreshold || 0);
 
   return (
     <>
@@ -231,6 +253,22 @@ export default function DashboardPage() {
             )}
           </motion.div>
 
+          {isEfficiencyLow && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-3"
+            >
+              <AlertTriangle className="text-amber-300 mt-0.5" size={18} />
+              <div>
+                <p className="text-amber-200 text-sm font-semibold">Low fuel efficiency detected</p>
+                <p className="text-amber-100/90 text-xs mt-1">
+                  Latest mileage is {latestFuelEfficiency.toFixed(2)} km/L, below your threshold of {Number(fuelEfficiencyThreshold).toFixed(1)} km/L.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
           {/* Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <StatCard
@@ -251,12 +289,20 @@ export default function DashboardPage() {
               danger={isDue}
             />
             <StatCard
+              icon={Fuel}
+              label="Avg Fuel Efficiency"
+              value={avgFuelEfficiency ? `${avgFuelEfficiency.toFixed(2)} km/L` : "--"}
+              sub="Last 3 fill-ups"
+              color="green"
+              delay={0.2}
+            />
+            <StatCard
               icon={CalendarDays}
               label="Last Oil Change"
               value={lastOilStr}
               sub="Date of last reset"
               color="cyan"
-              delay={0.2}
+              delay={0.3}
             />
             <StatCard
               icon={Settings2}
@@ -264,7 +310,23 @@ export default function DashboardPage() {
               value={`${oilChangeLimit.toLocaleString()} km`}
               sub="Current interval"
               color="green"
-              delay={0.3}
+              delay={0.4}
+            />
+            <StatCard
+              icon={IndianRupee}
+              label="Fuel Cost (Month)"
+              value={`Rs ${monthlyFuelCost.toFixed(0)}`}
+              sub="Total fuel spend this month"
+              color="cyan"
+              delay={0.5}
+            />
+            <StatCard
+              icon={Droplets}
+              label="Fuel Cost / KM"
+              value={costPerKm ? `Rs ${costPerKm.toFixed(2)}` : "--"}
+              sub="Fuel spend per kilometer"
+              color="blue"
+              delay={0.6}
             />
           </div>
 
