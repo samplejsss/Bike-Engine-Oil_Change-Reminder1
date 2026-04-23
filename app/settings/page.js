@@ -2,27 +2,31 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import { Settings, Save, Loader2, Smartphone, Bell, Bike, Navigation } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { bikes, activeBikeId, selectBike } = useActiveBike();
   const router = useRouter();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    bikeName: "My Bike",
-    oilChangeLimit: 2000,
     mechanicPhone: "",
     autoMessageEnabled: true,
     preferredMethod: "wa",
-    lastOilChangeDate: "",
     fuelEfficiencyThreshold: 35,
+  });
+  const [bikeForm, setBikeForm] = useState({
+    name: "My Bike",
+    oilChangeInterval: 2000,
+    lastOilChangeDate: "",
   });
 
   useEffect(() => {
@@ -38,12 +42,9 @@ export default function SettingsPage() {
         if (snap.exists()) {
           const d = snap.data();
           setFormData({
-            bikeName: d.bikeName || "My Bike",
-            oilChangeLimit: d.oilChangeLimit ?? 2000,
             mechanicPhone: d.mechanicPhone || "",
             autoMessageEnabled: d.autoMessageEnabled ?? true,
             preferredMethod: d.preferredMethod || "wa",
-            lastOilChangeDate: d.lastOilChangeDate ? new Date(d.lastOilChangeDate.seconds ? d.lastOilChangeDate.seconds * 1000 : (typeof d.lastOilChangeDate.toMillis === 'function' ? d.lastOilChangeDate.toMillis() : d.lastOilChangeDate)).toISOString().split('T')[0] : "",
             fuelEfficiencyThreshold: d.fuelEfficiencyThreshold ?? 35,
           });
         }
@@ -57,25 +58,61 @@ export default function SettingsPage() {
     loadSettings();
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !activeBikeId) return;
+    const loadBike = async () => {
+      try {
+        const bikeRef = doc(db, "users", user.uid, "bikes", activeBikeId);
+        const bikeSnap = await getDoc(bikeRef);
+        if (bikeSnap.exists()) {
+          const b = bikeSnap.data();
+          setBikeForm({
+            name: b.name || "My Bike",
+            oilChangeInterval: b.oilChangeInterval ?? 2000,
+            lastOilChangeDate: b.lastOilChangeDate
+              ? new Date(
+                  b.lastOilChangeDate.seconds
+                    ? b.lastOilChangeDate.seconds * 1000
+                    : typeof b.lastOilChangeDate.toMillis === "function"
+                      ? b.lastOilChangeDate.toMillis()
+                      : b.lastOilChangeDate
+                )
+                  .toISOString()
+                  .split("T")[0]
+              : "",
+          });
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load bike settings.");
+      }
+    };
+    loadBike();
+  }, [user, activeBikeId]);
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       const ref = doc(db, "users", user.uid);
       const updateData = {
-        bikeName: formData.bikeName,
-        oilChangeLimit: Number(formData.oilChangeLimit),
         mechanicPhone: formData.mechanicPhone,
         autoMessageEnabled: formData.autoMessageEnabled,
         preferredMethod: formData.preferredMethod,
         fuelEfficiencyThreshold: Number(formData.fuelEfficiencyThreshold),
       };
+      await updateDoc(ref, updateData);
 
-      if (formData.lastOilChangeDate) {
-        updateData.lastOilChangeDate = new Date(formData.lastOilChangeDate);
+      if (activeBikeId) {
+        const bikeRef = doc(db, "users", user.uid, "bikes", activeBikeId);
+        const bikePatch = {
+          name: bikeForm.name,
+          oilChangeInterval: Number(bikeForm.oilChangeInterval),
+        };
+        if (bikeForm.lastOilChangeDate) bikePatch.lastOilChangeDate = new Date(bikeForm.lastOilChangeDate);
+        await setDoc(bikeRef, bikePatch, { merge: true });
       }
 
-      await updateDoc(ref, updateData);
       toast.success("Settings saved successfully!");
     } catch (err) {
       console.error(err);
@@ -127,8 +164,8 @@ export default function SettingsPage() {
                          <label className="block text-sm font-medium text-slate-400 mb-1">Bike / Vehicle Name</label>
                          <input 
                            type="text" 
-                           value={formData.bikeName}
-                           onChange={e => setFormData({...formData, bikeName: e.target.value})}
+                           value={bikeForm.name}
+                           onChange={e => setBikeForm({...bikeForm, name: e.target.value})}
                            className="glass-input w-full"
                          />
                       </div>
@@ -136,8 +173,8 @@ export default function SettingsPage() {
                          <label className="block text-sm font-medium text-slate-400 mb-1">Oil Change Interval (km)</label>
                          <input 
                            type="number" 
-                           value={formData.oilChangeLimit}
-                           onChange={e => setFormData({...formData, oilChangeLimit: e.target.value})}
+                           value={bikeForm.oilChangeInterval}
+                           onChange={e => setBikeForm({...bikeForm, oilChangeInterval: e.target.value})}
                            className="glass-input w-full"
                            min="50"
                          />
@@ -146,8 +183,8 @@ export default function SettingsPage() {
                          <label className="block text-sm font-medium text-slate-400 mb-1">Last Oil Change Date</label>
                          <input 
                            type="date" 
-                           value={formData.lastOilChangeDate}
-                           onChange={e => setFormData({...formData, lastOilChangeDate: e.target.value})}
+                           value={bikeForm.lastOilChangeDate}
+                           onChange={e => setBikeForm({...bikeForm, lastOilChangeDate: e.target.value})}
                            className="glass-input w-full md:w-1/2"
                          />
                       </div>
@@ -224,6 +261,38 @@ export default function SettingsPage() {
                         </div>
                      )}
                    </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4 border-b border-white/10 pb-2 flex items-center gap-2">
+                    <Bike size={18} className="text-cyan-400" /> Active Bike
+                  </h3>
+                  <div className="space-y-3">
+                    <select
+                      value={activeBikeId || ""}
+                      onChange={(e) => selectBike(e.target.value)}
+                      className="glass-input w-full md:w-1/2"
+                    >
+                      {bikes.map((bike) => (
+                        <option key={bike.id} value={bike.id}>
+                          {bike.name}
+                        </option>
+                      ))}
+                    </select>
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={async () => {
+                        if (!activeBikeId) return;
+                        await selectBike(activeBikeId, true);
+                        toast.success("Default bike updated.");
+                      }}
+                      className="px-4 py-2 rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-sm font-medium"
+                    >
+                      Set as default
+                    </motion.button>
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-white/10">

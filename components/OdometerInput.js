@@ -3,13 +3,15 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Gauge, ChevronDown } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { doc, updateDoc, increment, serverTimestamp, collection, addDoc } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp, collection, addDoc } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import toast from "react-hot-toast";
 import { playSuccessSound } from "@/hooks/useNotifications";
 
 export default function OdometerInput({ onRideAdded, currentStats }) {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [isExpanded, setIsExpanded] = useState(false);
   const [newReading, setNewReading] = useState("");
   const [loading, setLoading] = useState(false);
@@ -20,6 +22,10 @@ export default function OdometerInput({ onRideAdded, currentStats }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!activeBikeId) {
+      toast.error("Select a bike first.");
+      return;
+    }
 
     if (!newReading || parseFloat(newReading) < 0) {
       toast.error("Please enter a valid odometer reading.");
@@ -51,6 +57,7 @@ export default function OdometerInput({ onRideAdded, currentStats }) {
       // Add odometer entry
       await addDoc(collection(db, "odometer_readings"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         reading: reading,
         kmCalculated: kmRidden,
         date: serverTimestamp(),
@@ -59,14 +66,15 @@ export default function OdometerInput({ onRideAdded, currentStats }) {
       // Add corresponding ride entry
       await addDoc(collection(db, "rides"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         km: kmRidden,
         odometerEntry: true,
         date: serverTimestamp(),
       });
 
       // Update only lastOdometerReading (totalKm is now calculated from ride history)
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, {
+      const bikeRef = doc(db, "users", user.uid, "bikes", activeBikeId);
+      await updateDoc(bikeRef, {
         lastOdometerReading: reading,
       });
 

@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { PlusCircle, Loader2, Wrench, Tag, CalendarDays } from "lucide-react";
+import { PlusCircle, Loader2, Wrench } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import toast from "react-hot-toast";
 
 const SERVICE_TYPES = [
@@ -28,6 +29,7 @@ const COST_CATEGORIES = [
 
 export default function ServiceInput({ onServiceAdded }) {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [serviceType, setServiceType] = useState("Oil Change");
   const [cost, setCost] = useState("");
   const [costCategory, setCostCategory] = useState("Parts");
@@ -41,11 +43,17 @@ export default function ServiceInput({ onServiceAdded }) {
       return;
     }
 
+    if (!activeBikeId) {
+      toast.error("Select a bike first.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       await addDoc(collection(db, "services"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         serviceType,
         cost: parseFloat(cost),
         costCategory,

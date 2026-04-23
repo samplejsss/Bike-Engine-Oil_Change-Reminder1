@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { collection, query, where, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import { Wrench, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import toast from "react-hot-toast";
@@ -22,17 +23,19 @@ const SERVICE_COLORS = {
 
 export default function ServiceHistory({ onServiceDeleted }) {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [filterType, setFilterType] = useState("All");
 
-  const fetchServices = async () => {
-    if (!user) return;
+  const fetchServices = useCallback(async () => {
+    if (!user || !activeBikeId) return;
     try {
       const q = query(
         collection(db, "services"),
-        where("userId", "==", user.uid)
+        where("userId", "==", user.uid),
+        where("bikeId", "==", activeBikeId)
       );
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map((d) => ({
@@ -47,11 +50,11 @@ export default function ServiceHistory({ onServiceDeleted }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, activeBikeId]);
 
   useEffect(() => {
-    if (user) fetchServices();
-  }, [user]);
+    if (user && activeBikeId) fetchServices();
+  }, [user, activeBikeId, fetchServices]);
 
   const handleDelete = async (id) => {
     setDeleting(id);
@@ -60,7 +63,7 @@ export default function ServiceHistory({ onServiceDeleted }) {
       toast.success("Service deleted");
       await fetchServices();
       if (onServiceDeleted) onServiceDeleted();
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete service");
     } finally {
       setDeleting(null);
@@ -140,7 +143,7 @@ export default function ServiceHistory({ onServiceDeleted }) {
                 </div>
                 {service.notes && (
                   <p className="text-xs text-slate-400 mt-2 italic">
-                    "{service.notes}"
+                    &quot;{service.notes}&quot;
                   </p>
                 )}
               </div>

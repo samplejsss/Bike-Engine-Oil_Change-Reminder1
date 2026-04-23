@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import { Bike, LayoutDashboard, History as HistoryIcon, LogOut, LogIn, Menu, X, TrendingUp, Settings, Sparkles, Fuel } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
   const { user } = useAuth();
+  const { bikes, activeBikeId, selectBike } = useActiveBike();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -24,6 +26,7 @@ export default function Navbar() {
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
         { href: "/history", label: "History", icon: HistoryIcon },
         { href: "/fuel", label: "Fuel", icon: Fuel },
+        { href: "/bikes", label: "Bikes", icon: Bike },
         { href: "/analytics", label: "Analytics", icon: TrendingUp },
         { href: "/advisor", label: "Advisor", icon: Sparkles },
         { href: "/settings", label: "Settings", icon: Settings },
@@ -69,6 +72,22 @@ export default function Navbar() {
                   </Link>
                 ))}
               </div>
+
+              {user && bikes?.length > 0 && (
+                <div className="hidden md:flex items-center">
+                  <select
+                    value={activeBikeId || ""}
+                    onChange={(e) => selectBike(e.target.value)}
+                    className="glass-input !h-10 !py-0 text-sm min-w-44 bg-slate-900 border-white/10"
+                  >
+                    {bikes.map((bike) => (
+                      <option key={bike.id} value={bike.id}>
+                        {bike.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Auth Buttons (Desktop) */}
               <div className="hidden md:flex items-center gap-3">

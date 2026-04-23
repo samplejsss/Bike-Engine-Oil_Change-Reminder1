@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
-import { MapPin, Calendar, Clock, Bike, Loader2, Edit2, Trash2, Check, X as XIcon, History as HistoryIcon, Download } from "lucide-react";
+import { Calendar, Clock, Bike, Loader2, Edit2, Trash2, Check, X as XIcon, History as HistoryIcon, Download } from "lucide-react";
 import CalendarComponent from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
+  const { activeBikeId, loading: bikeLoading } = useActiveBike();
   const router = useRouter();
   const [rides, setRides] = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
@@ -35,12 +37,13 @@ export default function HistoryPage() {
   }, [user, authLoading, router]);
 
   const fetchHistory = useCallback(async () => {
-    if (!user) return;
+    if (!user || !activeBikeId) return;
     try {
       setDataLoading(true);
       const q = query(
         collection(db, "rides"),
-        where("userId", "==", user.uid)
+        where("userId", "==", user.uid),
+        where("bikeId", "==", activeBikeId)
       );
       const querySnapshot = await getDocs(q);
       const fetched = [];
@@ -59,17 +62,18 @@ export default function HistoryPage() {
     } finally {
       setDataLoading(false);
     }
-  }, [user]);
+  }, [user, activeBikeId]);
 
   useEffect(() => {
-    if (user) fetchHistory();
-  }, [user, fetchHistory]);
+    if (user && activeBikeId) fetchHistory();
+  }, [user, activeBikeId, fetchHistory]);
 
   const fetchAllRidesForDownload = useCallback(async () => {
-    if (!user) return [];
+    if (!user || !activeBikeId) return [];
     const q = query(
       collection(db, "rides"),
-      where("userId", "==", user.uid)
+      where("userId", "==", user.uid),
+      where("bikeId", "==", activeBikeId)
     );
 
     const querySnapshot = await getDocs(q);
@@ -85,7 +89,7 @@ export default function HistoryPage() {
     });
 
     return fetched;
-  }, [user]);
+  }, [user, activeBikeId]);
 
   const getRideDateObj = (ride) => {
     const d = ride?.date;
@@ -295,7 +299,7 @@ export default function HistoryPage() {
     }
   };
 
-  if (authLoading || dataLoading) {
+  if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">

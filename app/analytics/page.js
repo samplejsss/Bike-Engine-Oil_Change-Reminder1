@@ -8,6 +8,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { buildFuelEntriesWithEfficiency, getRecentAverageKmpl } from "@/lib/fuelMetrics";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
@@ -26,6 +27,7 @@ const EXPENSE_COLORS = {
 
 export default function AnalyticsPage() {
   const { user, loading: authLoading } = useAuth();
+  const { activeBikeId, loading: bikeLoading } = useActiveBike();
   const router = useRouter();
   
   const [rides, setRides] = useState([]);
@@ -40,12 +42,16 @@ export default function AnalyticsPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeBikeId) return;
     
     const fetchData = async () => {
       setDataLoading(true);
       try {
-        const qRides = query(collection(db, "rides"), where("userId", "==", user.uid));
+        const qRides = query(
+          collection(db, "rides"),
+          where("userId", "==", user.uid),
+          where("bikeId", "==", activeBikeId)
+        );
         const rideSnaps = await getDocs(qRides);
         const rData = rideSnaps.docs.map(d => ({
           id: d.id,
@@ -54,7 +60,11 @@ export default function AnalyticsPage() {
         }));
         setRides(rData);
 
-        const qExp = query(collection(db, "expenses"), where("userId", "==", user.uid));
+        const qExp = query(
+          collection(db, "expenses"),
+          where("userId", "==", user.uid),
+          where("bikeId", "==", activeBikeId)
+        );
         const expSnaps = await getDocs(qExp);
         const eData = expSnaps.docs.map(d => ({
           id: d.id,
@@ -63,7 +73,10 @@ export default function AnalyticsPage() {
         }));
         setExpenses(eData);
 
-        const qFuel = query(collection(db, "users", user.uid, "fuelLogs"));
+        const qFuel = query(
+          collection(db, "users", user.uid, "fuelLogs"),
+          where("bikeId", "==", activeBikeId)
+        );
         const fuelSnaps = await getDocs(qFuel);
         const fData = fuelSnaps.docs.map((d) => ({ id: d.id, ...d.data() }));
         setFuelLogs(fData);
@@ -75,9 +88,9 @@ export default function AnalyticsPage() {
     };
     
     fetchData();
-  }, [user]);
+  }, [user, activeBikeId]);
 
-  if (authLoading || dataLoading) {
+  if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 size={32} className="text-purple-400 animate-spin" />

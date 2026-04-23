@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, whe
 import { db } from "@/lib/firebase";
 import { buildFuelEntriesWithEfficiency, getFuelCostThisMonth, getLatestKmpl, getRecentAverageKmpl } from "@/lib/fuelMetrics";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import StatCard from "@/components/StatCard";
 import CircularProgress from "@/components/CircularProgress";
@@ -31,8 +32,10 @@ import {
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const { activeBike, activeBikeId, loading: bikeLoading } = useActiveBike();
   const router = useRouter();
   const [userData, setUserData] = useState(null);
+  const [bikeData, setBikeData] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [showAlert, setShowAlert] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -46,19 +49,9 @@ export default function DashboardPage() {
     try {
       const ref = doc(db, "users", user.uid);
       const snap = await getDoc(ref);
-      if (snap.exists()) {
-        setUserData(snap.data());
-      } else {
-        // Create default doc
-        const defaults = {
-          email: user.email,
-          totalKm: 953.3,
-          lastOdometerReading: 953.3,
-          oilChangeLimit: 2000,
-          lastResetKm: 0,
-          fuelEfficiencyThreshold: 35,
-          createdAt: serverTimestamp(),
-        };
+      if (snap.exists()) setUserData(snap.data());
+      else {
+        const defaults = { email: user.email, fuelEfficiencyThreshold: 35, createdAt: serverTimestamp() };
         await setDoc(ref, defaults);
         setUserData(defaults);
       }
@@ -69,16 +62,42 @@ export default function DashboardPage() {
     }
   }, [user]);
 
+  const fetchBikeData = useCallback(async () => {
+    if (!user || !activeBikeId) return;
+    try {
+      const bikeRef = doc(db, "users", user.uid, "bikes", activeBikeId);
+      const bikeSnap = await getDoc(bikeRef);
+      if (bikeSnap.exists()) {
+        setBikeData(bikeSnap.data());
+      } else {
+        const defaults = {
+          name: activeBike?.name || "My Bike",
+          purchaseKm: 0,
+          oilChangeInterval: 2000,
+          lastResetKm: 0,
+          lastOdometerReading: 0,
+          hasInitialOdometer: false,
+          createdAt: serverTimestamp(),
+        };
+        await setDoc(bikeRef, defaults);
+        setBikeData(defaults);
+      }
+    } catch (err) {
+      console.error("Error fetching bike data:", err);
+    }
+  }, [user, activeBikeId, activeBike?.name]);
+
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading, router]);
 
   const fetchStats = useCallback(async () => {
-    if (!user) return;
+    if (!user || !activeBikeId) return;
     try {
       const allRidesQuery = query(
         collection(db, "rides"),
-        where("userId", "==", user.uid)
+        where("userId", "==", user.uid),
+        where("bikeId", "==", activeBikeId)
       );
       const allRidesSnap = await getDocs(allRidesQuery);
       let totalSum = 0;
@@ -88,37 +107,39 @@ export default function DashboardPage() {
       setTotalKmFromHistory(totalSum);
       const twoWeeksAgo = new Date();
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-      const q = query(
-        collection(db, "rides"),
-        where("userId", "==", user.uid),
-        where("date", ">=", twoWeeksAgo)
-      );
-      const snap = await getDocs(q);
-      let sum = 0;
-      snap.forEach(d => { sum += d.data().km; });
-      setAvgDailyKm(sum / 14);
+      let last14Sum = 0;
+      allRidesSnap.forEach((d) => {
+        const data = d.data() || {};
+        const dt = data.date?.toDate ? data.date.toDate() : data.date?.seconds ? new Date(data.date.seconds * 1000) : null;
+        if (dt && dt >= twoWeeksAgo) last14Sum += Number(data.km || 0);
+      });
+      setAvgDailyKm(last14Sum / 14);
 
-      const fuelLogsQuery = query(collection(db, "users", user.uid, "fuelLogs"));
-      const fuelLogsSnap = await getDocs(fuelLogsQuery);
+      const fuelLogsQueryScoped = query(
+        collection(db, "users", user.uid, "fuelLogs"),
+        where("bikeId", "==", activeBikeId)
+      );
+      const fuelLogsSnap = await getDocs(fuelLogsQueryScoped);
       const logs = fuelLogsSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       setFuelEntries(buildFuelEntriesWithEfficiency(logs));
     } catch(err) {
       console.error(err);
     }
-  }, [user]);
+  }, [user, activeBikeId]);
 
   useEffect(() => {
-    if (user) {
+    if (user && activeBikeId) {
       fetchUserData();
+      fetchBikeData();
       fetchStats();
     }
-  }, [user, fetchUserData, fetchStats]);
+  }, [user, activeBikeId, fetchUserData, fetchBikeData, fetchStats]);
 
   // Check reminder
   useEffect(() => {
-    if (!userData) return;
-    const { oilChangeLimit, lastResetKm } = userData;
-    const remaining = oilChangeLimit - (totalKmFromHistory - lastResetKm);
+    if (!bikeData) return;
+    const { oilChangeInterval, lastResetKm } = bikeData;
+    const remaining = oilChangeInterval - (totalKmFromHistory - lastResetKm);
     if (remaining <= 0) {
         setShowAlert(true);
         if (!showAlert) { // To prevent infinite sounds if it re-renders
@@ -126,17 +147,21 @@ export default function DashboardPage() {
             playWarningSound();
         }
     }
-  }, [userData, showAlert, totalKmFromHistory]);
+  }, [bikeData, showAlert, totalKmFromHistory]);
+
+  const refreshDashboardData = useCallback(async () => {
+    await Promise.all([fetchUserData(), fetchBikeData(), fetchStats()]);
+  }, [fetchUserData, fetchBikeData, fetchStats]);
 
   const handleOilChanged = async () => {
     setResetLoading(true);
     try {
-      const ref = doc(db, "users", user.uid);
+      const ref = doc(db, "users", user.uid, "bikes", activeBikeId);
       await updateDoc(ref, {
         lastResetKm: totalKmFromHistory,
         lastOilChangeDate: serverTimestamp(),
       });
-      await fetchUserData();
+      await fetchBikeData();
       await fetchStats();
       setShowAlert(false);
     } catch (err) {
@@ -146,7 +171,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || dataLoading) {
+  if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -160,28 +185,29 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user || !userData) return null;
+  if (!user || !userData || !bikeData || !activeBikeId) return null;
 
   // Show initial odometer setup if not configured
-  const hasInitialOdometer = userData.hasInitialOdometer || userData.lastOdometerReading > 0;
+  const hasInitialOdometer = bikeData.hasInitialOdometer || bikeData.lastOdometerReading > 0;
   if (!hasInitialOdometer) {
     return (
       <>
         <Navbar />
         <InitialOdometerSetup 
-          onComplete={fetchUserData} 
-          currentOdometerReading={userData.lastOdometerReading || 0}
+          onComplete={refreshDashboardData} 
+          currentOdometerReading={bikeData.lastOdometerReading || 0}
         />
       </>
     );
   }
 
-  const { oilChangeLimit = 2000, lastResetKm = 0, lastOilChangeDate, quickAddKm = 0, mechanicPhone = "", fuelEfficiencyThreshold = 35 } = userData;
+  const { oilChangeInterval = 2000, lastResetKm = 0, lastOilChangeDate, lastOdometerReading = 0 } = bikeData;
+  const { quickAddKm = 0, mechanicPhone = "", fuelEfficiencyThreshold = 35 } = userData;
   const totalKm = totalKmFromHistory;
   const kmSinceReset = totalKm - lastResetKm;
-  const remainingKm = Math.max(0, oilChangeLimit - kmSinceReset);
-  const oilUsedPct = Math.min(100, (kmSinceReset / oilChangeLimit) * 100);
-  const isDue = (oilChangeLimit - kmSinceReset) <= 0;
+  const remainingKm = Math.max(0, oilChangeInterval - kmSinceReset);
+  const oilUsedPct = Math.min(100, (kmSinceReset / oilChangeInterval) * 100);
+  const isDue = (oilChangeInterval - kmSinceReset) <= 0;
 
   const lastOilStr = lastOilChangeDate
     ? new Date(
@@ -231,7 +257,7 @@ export default function DashboardPage() {
           >
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-white">
-                Hey, {user.email?.split("@")[0]} 👋
+                {activeBike?.name || "Your Bike"} Dashboard 👋
               </h1>
               <p className="text-slate-400 text-sm mt-1">
                 {isDue ? (
@@ -270,7 +296,7 @@ export default function DashboardPage() {
           )}
 
           {/* Stats Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             <StatCard
               icon={MapPin}
               label="Total KM Ridden"
@@ -307,7 +333,7 @@ export default function DashboardPage() {
             <StatCard
               icon={Settings2}
               label="Oil Change Limit"
-              value={`${oilChangeLimit.toLocaleString()} km`}
+              value={`${oilChangeInterval.toLocaleString()} km`}
               sub="Current interval"
               color="green"
               delay={0.4}
@@ -345,7 +371,7 @@ export default function DashboardPage() {
               <CircularProgress
                 percentage={oilUsedPct}
                 remainingKm={remainingKm}
-                limit={oilChangeLimit}
+                limit={oilChangeInterval}
                 danger={isDue}
               />
               
@@ -363,20 +389,20 @@ export default function DashboardPage() {
                  <div className="space-y-6">
                     {/* Odometer Reading */}
                     <OdometerInput 
-                      onRideAdded={fetchUserData} 
-                      currentStats={{ totalKm, lastResetKm, oilChangeLimit, lastOdometerReading: userData.lastOdometerReading || 0 }}
+                      onRideAdded={refreshDashboardData} 
+                      currentStats={{ totalKm, lastResetKm, oilChangeLimit: oilChangeInterval, lastOdometerReading, bikeId: activeBikeId }}
                     />
                  </div>
                  <div className="space-y-6">
                     {/* Add ride */}
                     <DailyRideInput 
-                      onRideAdded={fetchUserData} 
+                      onRideAdded={refreshDashboardData} 
                       quickAddKm={quickAddKm} 
                       mechanicPhone={mechanicPhone} 
-                      currentStats={{ totalKm, lastResetKm, oilChangeLimit }}
+                      currentStats={{ totalKm, lastResetKm, oilChangeLimit: oilChangeInterval, bikeId: activeBikeId }}
                     />
                     {/* Add expense */}
-                    <ExpenseInput onExpenseAdded={fetchUserData} />
+                    <ExpenseInput onExpenseAdded={refreshDashboardData} />
                  </div>
               </div>
 

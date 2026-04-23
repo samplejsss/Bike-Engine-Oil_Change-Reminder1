@@ -5,11 +5,13 @@ import { Loader2, Gauge, CheckCircle } from "lucide-react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import toast from "react-hot-toast";
 import { playSuccessSound } from "@/hooks/useNotifications";
 
 export default function InitialOdometerSetup({ onComplete, currentOdometerReading = 0 }) {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [reading, setReading] = useState(currentOdometerReading.toString());
   const [loading, setLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -27,15 +29,19 @@ export default function InitialOdometerSetup({ onComplete, currentOdometerReadin
     setLoading(true);
 
     try {
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
+      if (!activeBikeId) {
+        toast.error("Select a bike first.");
+        return;
+      }
+      const bikeRef = doc(db, "users", user.uid, "bikes", activeBikeId);
+      const snap = await getDoc(bikeRef);
       const currentData = snap.data() || {};
 
       // Only update if not already set
       if (!currentData.hasInitialOdometer || currentData.lastOdometerReading === 0) {
-        await updateDoc(userRef, {
+        await updateDoc(bikeRef, {
           lastOdometerReading: odometerValue,
-          totalKm: odometerValue,
+          purchaseKm: odometerValue,
           hasInitialOdometer: true,
         });
       }
@@ -104,7 +110,7 @@ export default function InitialOdometerSetup({ onComplete, currentOdometerReadin
           </div>
           <div>
             <h2 className="text-2xl font-bold text-white">Set Initial Odometer</h2>
-            <p className="text-sm text-slate-400">Enter your bike's current reading</p>
+            <p className="text-sm text-slate-400">Enter your bike&apos;s current reading</p>
           </div>
         </div>
 
@@ -118,7 +124,7 @@ export default function InitialOdometerSetup({ onComplete, currentOdometerReadin
                 type="number"
                 value={reading}
                 onChange={(e) => setReading(e.target.value)}
-                placeholder="Enter your bike's odometer (e.g. 953.3)"
+                placeholder="Enter your bike&apos;s odometer (e.g. 953.3)"
                 className="glass-input pr-12 text-lg"
                 min="0"
                 step="0.1"

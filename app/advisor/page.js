@@ -2,15 +2,17 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Send, Bot, Loader2, Sparkles, MessageSquare, KeyRound } from "lucide-react";
+import { Send, Bot, Loader2, Sparkles, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import ReactMarkdown from "react-markdown";
 
 export default function AIAdvisorPage() {
   const { user, loading: authLoading } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const router = useRouter();
   
   const [dataContext, setDataContext] = useState(null);
@@ -26,21 +28,29 @@ export default function AIAdvisorPage() {
 
   // Fetch contextual user data
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeBikeId) return;
     const fetchContext = async () => {
       try {
         const uRef = await getDoc(doc(db, "users", user.uid));
         const uData = uRef.data() || {};
         
         // Fetch context without orderBy to avoid Firebase index errors, then sort in JS
-        const qRides = query(collection(db, "rides"), where("userId", "==", user.uid));
+        const qRides = query(
+          collection(db, "rides"),
+          where("userId", "==", user.uid),
+          where("bikeId", "==", activeBikeId)
+        );
         const rSnap = await getDocs(qRides);
         const latestRides = rSnap.docs
           .map(d => ({ km: d.data().km, date: d.data().date?.toDate() }))
           .sort((a,b) => (b.date || 0) - (a.date || 0))
           .slice(0, 5);
 
-        const qExp = query(collection(db, "expenses"), where("userId", "==", user.uid));
+        const qExp = query(
+          collection(db, "expenses"),
+          where("userId", "==", user.uid),
+          where("bikeId", "==", activeBikeId)
+        );
         const eSnap = await getDocs(qExp);
         const latestExpenses = eSnap.docs
           .map(d => ({ amount: d.data().amount, type: d.data().type, date: d.data().date?.toDate() }))
@@ -49,7 +59,7 @@ export default function AIAdvisorPage() {
 
         setDataContext({
           userStats: {
-            bikeName: uData.bikeName || "My Bike",
+            bikeName: "Selected Bike",
             totalKm: uData.totalKm || 0,
             oilChangeLimit: uData.oilChangeLimit,
             kmSinceLastChange: (uData.totalKm || 0) - (uData.lastResetKm || 0)
@@ -62,7 +72,7 @@ export default function AIAdvisorPage() {
       }
     };
     fetchContext();
-  }, [user]);
+  }, [user, activeBikeId]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -95,7 +105,7 @@ export default function AIAdvisorPage() {
         try {
            const errData = JSON.parse(errText);
            errMsg = errData.error || errData.message || errMsg;
-        } catch(e) {
+        } catch {
            errMsg = errText.substring(0, 80); // Catch HTML error splash text safely
         }
         

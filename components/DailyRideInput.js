@@ -3,14 +3,16 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PlusCircle, Loader2, Bike, Camera } from "lucide-react";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, doc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import toast from "react-hot-toast";
 import MeterOCRUpload from "./MeterOCRUpload";
 import { playSuccessSound } from "@/hooks/useNotifications";
 
 export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPhone = "", currentStats }) {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [km, setKm] = useState("");
   const [loading, setLoading] = useState(false);
   const [showOCR, setShowOCR] = useState(false);
@@ -61,8 +63,6 @@ export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPh
       const smsUri = `sms:${cleanPhone}${isIOS ? '&' : '?'}body=${encodeURIComponent(details)}`;
 
       const pref = currentStats.preferredMethod || "wa"; // 'wa' or 'sms'
-      const triggerUri = pref === "sms" ? smsUri : waUri;
-      
       try {
         if (pref === "sms") {
             const smsLink = document.createElement("a");
@@ -85,7 +85,7 @@ export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPh
            dailyMessageCount: count + 1,
            lastMessageDate: todayStr
         });
-      } catch (err) {
+      } catch {
         console.error("Failed to update message counts");
       }
     }
@@ -97,6 +97,10 @@ export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPh
   };
 
   const handleAddRide = async (kmVal, imgUrl = null) => {
+    if (!activeBikeId) {
+      toast.error("Select a bike first.");
+      return;
+    }
     if (!kmVal || kmVal <= 0) {
       toast.error("Please enter a valid km value.");
       return;
@@ -111,6 +115,7 @@ export default function DailyRideInput({ onRideAdded, quickAddKm = 0, mechanicPh
       // Add ride doc (totalKm is now calculated from ride history)
       await addDoc(collection(db, "rides"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         km: kmVal,
         meterImage: imgUrl || null,
         date: serverTimestamp(),

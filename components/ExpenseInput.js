@@ -1,14 +1,16 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { PlusCircle, Loader2, IndianRupee, Tag, CalendarDays } from "lucide-react";
-import { db, auth } from "@/lib/firebase";
+import { PlusCircle, Loader2, IndianRupee, Tag } from "lucide-react";
+import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import toast from "react-hot-toast";
 
 export default function ExpenseInput({ onExpenseAdded }) {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("Fuel");
   const [loading, setLoading] = useState(false);
@@ -20,11 +22,17 @@ export default function ExpenseInput({ onExpenseAdded }) {
       return;
     }
     
+    if (!activeBikeId) {
+      toast.error("Select a bike first.");
+      return;
+    }
+    
     setLoading(true);
 
     try {
       await addDoc(collection(db, "expenses"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         amount: parseFloat(amount),
         type,
         date: serverTimestamp(),

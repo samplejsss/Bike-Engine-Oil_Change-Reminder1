@@ -4,12 +4,12 @@ import { motion } from "framer-motion";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import {
   PieChart,
   Pie,
   Cell,
   ResponsiveContainer,
-  Legend,
   Tooltip as RechartsTooltip,
   BarChart,
   Bar,
@@ -17,8 +17,8 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { Loader2, TrendingUp, IndianRupee } from "lucide-react";
-import { format, subMonths, startOfMonth } from "date-fns";
+import { Loader2, IndianRupee } from "lucide-react";
+import { format, subMonths } from "date-fns";
 
 const COLORS = {
   Fuel: "#a855f7",
@@ -30,13 +30,14 @@ const COLORS = {
 
 export default function ExpenseBreakdown() {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [expenses, setExpenses] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("6");
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeBikeId) return;
 
     const fetchData = async () => {
       setLoading(true);
@@ -44,7 +45,8 @@ export default function ExpenseBreakdown() {
         // Fetch expenses
         const qExp = query(
           collection(db, "expenses"),
-          where("userId", "==", user.uid)
+          where("userId", "==", user.uid),
+          where("bikeId", "==", activeBikeId)
         );
         const expSnaps = await getDocs(qExp);
         const expData = expSnaps.docs.map((d) => ({
@@ -57,7 +59,8 @@ export default function ExpenseBreakdown() {
         // Fetch services
         const qSvc = query(
           collection(db, "services"),
-          where("userId", "==", user.uid)
+          where("userId", "==", user.uid),
+          where("bikeId", "==", activeBikeId)
         );
         const svcSnaps = await getDocs(qSvc);
         const svcData = svcSnaps.docs.map((d) => ({
@@ -74,7 +77,7 @@ export default function ExpenseBreakdown() {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, activeBikeId]);
 
   // Calculate category breakdown
   const getCategoryBreakdown = () => {

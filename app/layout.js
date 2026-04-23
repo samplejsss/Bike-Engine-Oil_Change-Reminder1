@@ -1,5 +1,6 @@
 import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ActiveBikeProvider } from "@/hooks/useActiveBike";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 
@@ -18,20 +19,22 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning>
         <AuthProvider>
-          <div className="bg-mesh" aria-hidden="true" />
-          <div className="relative z-10 w-full overflow-x-hidden min-h-screen">
-            {children}
-          </div>
-          <Toaster 
-            position="bottom-center"
-            toastOptions={{
-              style: {
-                background: '#1e293b',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }
-            }}
-          />
+          <ActiveBikeProvider>
+            <div className="bg-mesh" aria-hidden="true" />
+            <div className="relative z-10 w-full overflow-x-hidden min-h-screen">
+              {children}
+            </div>
+            <Toaster 
+              position="bottom-center"
+              toastOptions={{
+                style: {
+                  background: '#1e293b',
+                  color: '#fff',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }
+              }}
+            />
+          </ActiveBikeProvider>
         </AuthProvider>
       </body>
     </html>

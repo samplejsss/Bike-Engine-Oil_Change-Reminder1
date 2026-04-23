@@ -2,9 +2,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { addDoc, collection, getDocs, query, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, getDocs, query, serverTimestamp, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import { buildFuelEntriesWithEfficiency } from "@/lib/fuelMetrics";
 import { Droplets, Loader2, Fuel, PlusCircle } from "lucide-react";
@@ -12,6 +13,7 @@ import toast from "react-hot-toast";
 
 export default function FuelPage() {
   const { user, loading: authLoading } = useAuth();
+  const { activeBikeId, loading: bikeLoading } = useActiveBike();
   const router = useRouter();
   const [dataLoading, setDataLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,10 +32,13 @@ export default function FuelPage() {
   }, [user, authLoading, router]);
 
   const fetchFuelLogs = useCallback(async () => {
-    if (!user) return;
+    if (!user || !activeBikeId) return;
     try {
       setDataLoading(true);
-      const fuelLogsQuery = query(collection(db, "users", user.uid, "fuelLogs"));
+      const fuelLogsQuery = query(
+        collection(db, "users", user.uid, "fuelLogs"),
+        where("bikeId", "==", activeBikeId)
+      );
       const snap = await getDocs(fuelLogsQuery);
       const logs = snap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       setFuelLogs(logs);
@@ -43,11 +48,11 @@ export default function FuelPage() {
     } finally {
       setDataLoading(false);
     }
-  }, [user]);
+  }, [user, activeBikeId]);
 
   useEffect(() => {
-    if (user) fetchFuelLogs();
-  }, [user, fetchFuelLogs]);
+    if (user && activeBikeId) fetchFuelLogs();
+  }, [user, activeBikeId, fetchFuelLogs]);
 
   const fuelEntries = useMemo(
     () => buildFuelEntriesWithEfficiency(fuelLogs).slice().reverse(),
@@ -58,6 +63,10 @@ export default function FuelPage() {
     e.preventDefault();
     if (!user) return;
 
+    if (!activeBikeId) {
+      toast.error("Select a bike first.");
+      return;
+    }
     const odometer = Number(formData.odometer);
     const liters = Number(formData.liters);
     const pricePerLiter = Number(formData.pricePerLiter);
@@ -74,6 +83,7 @@ export default function FuelPage() {
         odometer,
         liters,
         pricePerLiter,
+        bikeId: activeBikeId,
         stationName: formData.stationName.trim() || "",
         notes: formData.notes.trim() || "",
         createdAt: serverTimestamp(),
@@ -96,7 +106,7 @@ export default function FuelPage() {
     }
   };
 
-  if (authLoading || dataLoading) {
+  if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 size={28} className="text-purple-400 animate-spin" />

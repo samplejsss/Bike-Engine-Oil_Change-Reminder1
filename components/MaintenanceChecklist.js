@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import { CheckSquare, Plus, Trash2, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -39,19 +40,20 @@ const PRESET_CHECKLISTS = {
 
 export default function MaintenanceChecklist() {
   const { user } = useAuth();
+  const { activeBikeId } = useActiveBike();
   const [checklists, setChecklists] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPreset, setSelectedPreset] = useState(null);
   const [customName, setCustomName] = useState("");
   const [showNewChecklist, setShowNewChecklist] = useState(false);
   const [newItem, setNewItem] = useState("");
 
-  const fetchChecklists = async () => {
-    if (!user) return;
+  const fetchChecklists = useCallback(async () => {
+    if (!user || !activeBikeId) return;
     try {
       const q = query(
         collection(db, "checklists"),
-        where("userId", "==", user.uid)
+        where("userId", "==", user.uid),
+        where("bikeId", "==", activeBikeId)
       );
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map((d) => ({
@@ -64,11 +66,11 @@ export default function MaintenanceChecklist() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, activeBikeId]);
 
   useEffect(() => {
     if (user) fetchChecklists();
-  }, [user]);
+  }, [user, fetchChecklists]);
 
   const handleCreateFromPreset = async (presetName) => {
     try {
@@ -79,15 +81,15 @@ export default function MaintenanceChecklist() {
 
       await addDoc(collection(db, "checklists"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         name: presetName,
         items,
         createdAt: serverTimestamp(),
       });
 
       toast.success(`${presetName} checklist created!`);
-      setSelectedPreset(null);
       await fetchChecklists();
-    } catch (err) {
+    } catch {
       toast.error("Failed to create checklist");
     }
   };
@@ -101,6 +103,7 @@ export default function MaintenanceChecklist() {
     try {
       await addDoc(collection(db, "checklists"), {
         userId: user.uid,
+        bikeId: activeBikeId,
         name: customName,
         items: [],
         createdAt: serverTimestamp(),
@@ -110,7 +113,7 @@ export default function MaintenanceChecklist() {
       setCustomName("");
       setShowNewChecklist(false);
       await fetchChecklists();
-    } catch (err) {
+    } catch {
       toast.error("Failed to create checklist");
     }
   };
@@ -128,7 +131,7 @@ export default function MaintenanceChecklist() {
       });
 
       await fetchChecklists();
-    } catch (err) {
+    } catch {
       toast.error("Failed to update item");
     }
   };
@@ -155,7 +158,7 @@ export default function MaintenanceChecklist() {
       setNewItem("");
       await fetchChecklists();
       toast.success("Item added!");
-    } catch (err) {
+    } catch {
       toast.error("Failed to add item");
     }
   };
@@ -165,7 +168,7 @@ export default function MaintenanceChecklist() {
       await deleteDoc(doc(db, "checklists", id));
       toast.success("Checklist deleted");
       await fetchChecklists();
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete checklist");
     }
   };
