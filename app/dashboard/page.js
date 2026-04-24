@@ -172,18 +172,27 @@ export default function DashboardPage() {
 
       const expQuery = query(collection(db, "users", user.uid, "bikes", activeBikeId, "expenses"));
       const expSnap = await getDocs(expQuery);
+      
+      const oldExpQuery = query(collection(db, "expenses"), where("userId", "==", user.uid), where("bikeId", "==", activeBikeId));
+      const oldExpSnap = await getDocs(oldExpQuery);
+
       let mTotal = 0;
       const mCats = {};
       const startOfM = new Date(now.getFullYear(), now.getMonth(), 1);
-      expSnap.forEach((docSnap) => {
+      
+      const processExp = (docSnap) => {
         const d = docSnap.data() || {};
         const dt = d.date?.toDate ? d.date.toDate() : new Date(d.date);
         if (dt >= startOfM) {
           mTotal += (d.amount || 0);
-          const c = d.category || "Other";
+          const c = d.category || d.type || "Other";
           mCats[c] = (mCats[c] || 0) + (d.amount || 0);
         }
-      });
+      };
+      
+      expSnap.forEach(processExp);
+      oldExpSnap.forEach(processExp);
+
       let topCat = "None";
       let topAmt = 0;
       Object.entries(mCats).forEach(([k, v]) => { if (v > topAmt) { topAmt = v; topCat = k; } });

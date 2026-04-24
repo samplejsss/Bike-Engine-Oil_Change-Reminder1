@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
@@ -39,18 +39,46 @@ export default function ExpensesPage() {
     if (!user || !activeBikeId) return;
     
     setLoading(true);
-    const q = query(
+    let newExps = [];
+    let oldExps = [];
+
+    const updateState = () => {
+       const combined = [...newExps, ...oldExps].sort((a, b) => {
+         const dateA = a.date?.toDate ? a.date.toDate() : new Date(a.date || 0);
+         const dateB = b.date?.toDate ? b.date.toDate() : new Date(b.date || 0);
+         return dateB - dateA;
+       });
+       const formatted = combined.map(e => ({
+          ...e,
+          category: e.category || e.type || "Other"
+       }));
+       setExpenses(formatted);
+       if (newExps.length > 0 || oldExps.length > 0) {
+         setLoading(false);
+       }
+    };
+
+    const qNew = query(
       collection(db, "users", user.uid, "bikes", activeBikeId, "expenses"),
       orderBy("date", "desc")
     );
-    
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const exps = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setExpenses(exps);
-      setLoading(false);
+    const unsubNew = onSnapshot(qNew, (snap) => {
+      newExps = snap.docs.map(doc => ({ id: doc.id, isNew: true, ...doc.data() }));
+      updateState();
+      setLoading(false); // Make sure loading stops even if empty
+    });
+
+    const qOld = query(
+      collection(db, "expenses"),
+      where("userId", "==", user.uid),
+      where("bikeId", "==", activeBikeId)
+    );
+    const unsubOld = onSnapshot(qOld, (snap) => {
+      oldExps = snap.docs.map(doc => ({ id: doc.id, isOld: true, ...doc.data() }));
+      updateState();
     });
     
-    return () => unsubscribe();
+    return () => { unsubNew(); unsubOld(); };
   }, [user, activeBikeId]);
 
   const handleFileChange = (e) => {
@@ -107,10 +135,14 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (exp) => {
     if (!confirm("Are you sure you want to delete this expense?")) return;
     try {
-      await deleteDoc(doc(db, "users", user.uid, "bikes", activeBikeId, "expenses", id));
+      if (exp.isOld) {
+        await deleteDoc(doc(db, "expenses", exp.id));
+      } else {
+        await deleteDoc(doc(db, "users", user.uid, "bikes", activeBikeId, "expenses", exp.id));
+      }
       toast.success("Expense deleted");
     } catch (err) {
       console.error(err);
@@ -404,7 +436,7 @@ export default function ExpensesPage() {
                         </button>
                       )}
                       <button
-                        onClick={() => handleDelete(exp.id)}
+                        onClick={() => handleDelete(exp)}
                         className="p-2 rounded-lg bg-white/5 text-red-400 hover:bg-red-500/20 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                         title="Delete"
                       >

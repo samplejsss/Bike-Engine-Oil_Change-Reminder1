@@ -12,6 +12,7 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -19,7 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import { DOCUMENT_TYPES, getDocumentStatus, statusBadgeClasses } from "@/lib/documentUtils";
-import { Eye, FileText, Loader2, UploadCloud, X } from "lucide-react";
+import { Eye, FileText, Loader2, UploadCloud, X, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // Free-tier friendly limit: 5MB
@@ -155,6 +156,18 @@ export default function DocumentsPage() {
       toast.error("Upload failed.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteDocument = async (id) => {
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "bikes", activeBikeId, "documents", id));
+      toast.success("Document deleted");
+      await loadDocuments();
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete document");
     }
   };
 
@@ -306,7 +319,7 @@ export default function DocumentsPage() {
                           {daysLeft == null ? "--" : daysLeft <= 0 ? `Expired ${Math.abs(daysLeft)} days ago` : `Expires in ${daysLeft} days`}
                         </p>
                         {d.notes && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{d.notes}</p>}
-                        <div className="mt-3 flex justify-end">
+                        <div className="mt-3 flex justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => setViewerDoc(d)}
@@ -314,6 +327,13 @@ export default function DocumentsPage() {
                             className="px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-semibold flex items-center gap-1"
                           >
                             <Eye size={13} /> View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDocument(d.id)}
+                            className="px-3 py-1.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-xs font-semibold flex items-center gap-1 hover:bg-red-500/20"
+                          >
+                            <Trash2 size={13} /> Delete
                           </button>
                         </div>
                       </motion.div>
