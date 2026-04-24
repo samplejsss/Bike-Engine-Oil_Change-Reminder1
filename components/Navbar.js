@@ -195,7 +195,7 @@ export default function Navbar() {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
-            className="glass rounded-[24px] flex items-center justify-around px-2 py-2 shadow-2xl border border-white/10 bg-black/40 backdrop-blur-3xl pointer-events-auto"
+            className="glass rounded-[24px] flex items-center overflow-x-auto no-scrollbar px-2 py-2 shadow-2xl border border-white/10 bg-black/40 backdrop-blur-3xl pointer-events-auto snap-x"
           >
             {navLinks.map(({ href, label, icon: Icon }) => {
               const isActive = pathname === href;
@@ -203,7 +203,7 @@ export default function Navbar() {
                 <Link
                   key={href}
                   href={href}
-                  className="flex-1 flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 relative group"
+                  className="flex-none min-w-[72px] snap-center flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 relative group"
                 >
                   {isActive && (
                     <motion.div
@@ -216,7 +216,7 @@ export default function Navbar() {
                   <div className={`relative z-10 p-1 rounded-xl transition-all duration-300 ${isActive ? "text-purple-300 transform scale-110" : "text-slate-400 group-hover:text-white group-hover:scale-105"}`}>
                     <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
                   </div>
-                  <span className={`text-[9px] font-semibold tracking-wide relative z-10 transition-colors duration-300 ${isActive ? "text-purple-300" : "text-slate-500"}`}>
+                  <span className={`text-[10px] font-semibold tracking-wide relative z-10 transition-colors duration-300 ${isActive ? "text-purple-300" : "text-slate-500"}`}>
                     {label}
                   </span>
                 </Link>

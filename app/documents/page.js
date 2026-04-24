@@ -162,6 +162,27 @@ export default function DocumentsPage() {
     return groups;
   }, [documents]);
 
+  const handleOpenPdf = async (docItem) => {
+    try {
+      const url = String(docItem?.fileUrl || "").trim();
+      if (!url) {
+        toast.error("PDF URL missing. Please re-upload this document.");
+        return;
+      }
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not open PDF.");
+    }
+  };
+
   if (authLoading || bikeLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -298,14 +319,14 @@ export default function DocumentsPage() {
                         {d.notes && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{d.notes}</p>}
                         <div className="mt-3 flex justify-end">
                           {isPdf ? (
-                            <a
-                              href={d.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPdf(d)}
+                              disabled={!d.fileUrl}
                               className="px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-semibold"
                             >
                               Open PDF
-                            </a>
+                            </button>
                           ) : (
                             <button
                               type="button"
