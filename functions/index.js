@@ -19,7 +19,7 @@ const mailTransport = nodemailer.createTransport({
   },
 });
 
-exports.monthlyReportCron = functions.scheduler.onSchedule("0 9 1 * *", async (event) => {
+exports.monthlyReportCron = functions.scheduler.onSchedule("0 9 1 * *", async () => {
   const db = admin.firestore();
   console.log("Starting monthly report cron job...");
 

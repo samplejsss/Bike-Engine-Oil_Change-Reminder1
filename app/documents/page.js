@@ -14,8 +14,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { deleteObject } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";

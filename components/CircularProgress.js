@@ -1,10 +1,9 @@
 "use client";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Droplets } from "lucide-react";
 
 export default function CircularProgress({ percentage, remainingKm, limit, danger }) {
-  const [progress, setProgress] = useState(0);
   const size = 200;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
@@ -13,8 +12,7 @@ export default function CircularProgress({ percentage, remainingKm, limit, dange
   const offset = circumference - (clampedPct / 100) * circumference;
 
   useEffect(() => {
-    const timer = setTimeout(() => setProgress(clampedPct), 200);
-    return () => clearTimeout(timer);
+    // Animation trigger can go here if needed
   }, [clampedPct]);
 
   const gradId = danger ? "dangerGrad" : "progressGrad";

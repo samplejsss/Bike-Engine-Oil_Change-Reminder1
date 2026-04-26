@@ -19,7 +19,6 @@ export default function SettingsPage() {
   const { bikes, activeBikeId, selectBike } = useActiveBike();
   const router = useRouter();
   
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     mechanicPhone: "",
@@ -60,8 +59,6 @@ export default function SettingsPage() {
       } catch(err) {
          console.error(err);
          toast.error("Failed to load settings.");
-      } finally {
-        setLoading(false);
       }
     };
     loadSettings();
@@ -220,7 +217,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (authLoading || dataLoading || bikeLoading) {
+  if (authLoading || bikeLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <PageLoader variant="settings" />

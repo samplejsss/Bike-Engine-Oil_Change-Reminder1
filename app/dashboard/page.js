@@ -6,7 +6,7 @@ import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, whe
 import { db } from "@/lib/firebase";
 import { buildFuelEntriesWithEfficiency, getFuelCostThisMonth, getLatestKmpl, getRecentAverageKmpl } from "@/lib/fuelMetrics";
 import { useAuth } from "@/hooks/useAuth";
-import { useActive} from "@/hooks/useActiveBike";
+import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import StatCard from "@/components/StatCard";
 import CircularProgress from "@/components/CircularProgress";
@@ -20,7 +20,6 @@ import PageLoader from "@/components/PageLoader";
 import { playWarningSound, sendBrowserNotification } from "@/hooks/useNotifications";
 import { getDocumentStatus } from "@/lib/documentUtils";
 import {
-  Bike,
   MapPin,
   Droplets,
   CalendarDays,
