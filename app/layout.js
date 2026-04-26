@@ -13,6 +13,10 @@ const SITE_NAME = "BikeCare Tracker";
 export const metadata = {
   metadataBase: new URL(SITE_URL),
 
+  verification: {
+    google: "6QOun5pmJ2L9vLqPpOBBj4cr30XZOBeNU0MIuOw-_pk",
+  },
+
   title: {
     default: "BikeCare Tracker — Smart Motorcycle Maintenance & Oil Change Reminder",
     template: "%s | BikeCare Tracker",
