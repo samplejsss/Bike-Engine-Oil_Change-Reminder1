@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Allow: /dashboard
+Allow: /analytics
+Allow: /history
+Allow: /fuel
+Allow: /expenses
+Allow: /bikes
+Allow: /maintenance
+Allow: /documents
+Allow: /settings
+Allow: /services
+Allow: /checklists
+Allow: /advisor
+Allow: /login
+
+# Block Next.js internals
+Disallow: /_next/
+Disallow: /api/
+Disallow: /.next/
+
+# Sitemap
+Sitemap: https://myvehiclecares.vercel.app/sitemap.xml
+
+# Crawl delay (optional, be kind to crawlers)
+Crawl-delay: 1
