@@ -277,6 +277,7 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/logo.png" />
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#7c3aed" />
+    <meta name="google-site-verification" content="6QOun5pmJ2L9vLqPpOBBj4cr30XZOBeNU0MIuOw-_pk" />
         <StructuredData />
       </head>
       <body suppressHydrationWarning>
