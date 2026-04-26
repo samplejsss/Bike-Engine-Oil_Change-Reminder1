@@ -120,17 +120,27 @@ function AnimatedBike() {
   );
 }
 
+import { useEffect, useState } from "react";
+
 // Exhaust smoke particles
 function SmokeParticles() {
+  const [particles, setParticles] = useState([]);
+  useEffect(() => {
+    setParticles([...Array(6)].map((_, i) => ({
+      i,
+      yOffset: (Math.random() - 0.5) * 30
+    })));
+  }, []);
+
   return (
     <div className="absolute left-8 bottom-16 pointer-events-none">
-      {[...Array(6)].map((_, i) => (
+      {particles.map((p) => (
         <motion.div
-          key={i}
+          key={p.i}
           className="absolute w-3 h-3 rounded-full bg-slate-400/40 blur-sm"
           initial={{ x: 0, y: 0, scale: 0.5, opacity: 0.7 }}
-          animate={{ x: -(40 + i * 15), y: (Math.random() - 0.5) * 30, scale: 3, opacity: 0 }}
-          transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.13, ease: "easeOut" }}
+          animate={{ x: -(40 + p.i * 15), y: p.yOffset, scale: 3, opacity: 0 }}
+          transition={{ duration: 0.8, repeat: Infinity, delay: p.i * 0.13, ease: "easeOut" }}
         />
       ))}
     </div>

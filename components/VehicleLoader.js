@@ -2,7 +2,21 @@
 import { motion } from "framer-motion";
 import { Bike } from "lucide-react";
 
+import { useEffect, useState } from "react";
+
 export default function VehicleLoader() {
+  const [lines, setLines] = useState([]);
+  
+  useEffect(() => {
+    setLines([...Array(8)].map((_, i) => ({
+      i,
+      top: `${15 + i * 10}%`,
+      width: `${Math.random() * 40 + 20}%`,
+      duration: Math.random() * 0.6 + 0.4,
+      delay: Math.random() * 0.5,
+    })));
+  }, []);
+
   return (
     <div className="flex flex-col items-center justify-center p-8 w-full max-w-sm mx-auto">
       {/* Container for the animation */}
@@ -10,21 +24,21 @@ export default function VehicleLoader() {
         
         {/* Background Speed Lines */}
         <div className="absolute inset-0 opacity-30">
-          {[...Array(8)].map((_, i) => (
+          {lines.map((l) => (
             <motion.div
-              key={i}
+              key={l.i}
               className="absolute h-[2px] bg-gradient-to-r from-transparent via-purple-300 to-transparent rounded-full"
               style={{
-                top: `${15 + i * 10}%`,
-                width: `${Math.random() * 40 + 20}%`,
+                top: l.top,
+                width: l.width,
               }}
               initial={{ left: "100%" }}
               animate={{ left: "-50%" }}
               transition={{
-                duration: Math.random() * 0.6 + 0.4,
+                duration: l.duration,
                 repeat: Infinity,
                 ease: "linear",
-                delay: Math.random() * 0.5,
+                delay: l.delay,
               }}
             />
           ))}

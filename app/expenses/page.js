@@ -252,7 +252,7 @@ export default function ExpensesPage() {
                       {w.type === "exceeded" ? "Budget Exceeded" : "Approaching Budget Limit"} - {w.cat}
                     </p>
                     <p className="text-xs opacity-80 mt-0.5">
-                      You've spent ₹{w.spent.toLocaleString('en-IN')} of your ₹{w.limit.toLocaleString('en-IN')} monthly limit.
+                      You&apos;ve spent ₹{w.spent.toLocaleString('en-IN')} of your ₹{w.limit.toLocaleString('en-IN')} monthly limit.
                     </p>
                   </div>
                 </motion.div>
