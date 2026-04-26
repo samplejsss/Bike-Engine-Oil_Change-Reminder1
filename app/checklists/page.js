@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import MaintenanceChecklist from "@/components/MaintenanceChecklist";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { useAuth } from "@/hooks/useAuth";
 import { CheckSquare, Loader2 } from "lucide-react";
 
@@ -19,7 +19,7 @@ export default function ChecklistsPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="checklists" />
       </div>
     );
   }

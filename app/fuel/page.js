@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { buildFuelEntriesWithEfficiency } from "@/lib/fuelMetrics";
 import { Droplets, Loader2, Fuel, PlusCircle } from "lucide-react";
 import toast from "react-hot-toast";
@@ -110,7 +110,7 @@ export default function FuelPage() {
   if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="fuel" />
       </div>
     );
   }

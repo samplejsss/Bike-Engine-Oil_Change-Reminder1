@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import { computeNextDue } from "@/lib/maintenanceUtils";
 import Navbar from "@/components/Navbar";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { Settings, Save, Loader2, Smartphone, Bell, Bike, Navigation, IndianRupee } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -223,7 +223,7 @@ export default function SettingsPage() {
   if (authLoading || dataLoading || bikeLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="settings" />
       </div>
     );
   }

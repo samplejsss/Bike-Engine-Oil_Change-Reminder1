@@ -21,7 +21,7 @@ import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
 import { DOCUMENT_TYPES, getDocumentStatus, statusBadgeClasses } from "@/lib/documentUtils";
 import { Eye, FileText, Loader2, UploadCloud, X, Trash2 } from "lucide-react";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import toast from "react-hot-toast";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // Free-tier friendly limit: 5MB
@@ -189,7 +189,7 @@ export default function DocumentsPage() {
   if (authLoading || bikeLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="documents" />
       </div>
     );
   }

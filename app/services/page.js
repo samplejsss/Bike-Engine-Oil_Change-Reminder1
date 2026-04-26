@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import ServiceInput from "@/components/ServiceInput";
 import ServiceHistory from "@/components/ServiceHistory";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { useAuth } from "@/hooks/useAuth";
 import { Wrench } from "lucide-react";
 
@@ -21,7 +21,7 @@ export default function ServicesPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="services" />
       </div>
     );
   }

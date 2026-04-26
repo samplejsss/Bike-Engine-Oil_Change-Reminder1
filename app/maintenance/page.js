@@ -16,7 +16,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { PREDEFINED_MAINTENANCE_TASKS } from "@/lib/maintenanceDefaults";
 import { computeNextDue, formatDueLabel, getTaskStatus } from "@/lib/maintenanceUtils";
 import { Bike, CheckCircle2, ClipboardList, Download, Loader2, Plus, Settings2 } from "lucide-react";
@@ -337,7 +337,7 @@ export default function MaintenancePage() {
   if (authLoading || bikeLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="maintenance" />
       </div>
     );
   }

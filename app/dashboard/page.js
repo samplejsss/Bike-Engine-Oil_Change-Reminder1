@@ -16,7 +16,7 @@ import InitialOdometerSetup from "@/components/InitialOdometerSetup";
 import ExpenseInput from "@/components/ExpenseInput";
 import MaintenanceChecklist from "@/components/MaintenanceChecklist";
 import AlertModal from "@/components/AlertModal";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { playWarningSound, sendBrowserNotification } from "@/hooks/useNotifications";
 import { getDocumentStatus } from "@/lib/documentUtils";
 import {
@@ -251,7 +251,7 @@ export default function DashboardPage() {
   if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="dashboard" />
       </div>
     );
   }

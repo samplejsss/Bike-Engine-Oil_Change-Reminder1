@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import { Bike, Pencil, Plus, Trash2, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -124,7 +124,7 @@ export default function BikesPage() {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="bikes" />
       </div>
     );
   }

@@ -11,6 +11,13 @@ export const metadata = {
   title: "BikeCare Tracker — Track Your Bike Health Smartly",
   description: "Track your daily rides and never miss an oil change. BikeCare Tracker helps you monitor bike health with smart km-based reminders.",
   keywords: "bike tracker, oil change reminder, motorcycle maintenance, daily ride tracker",
+  icons: {
+    icon: [
+      { url: "/logo.png", type: "image/png" },
+    ],
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }) {

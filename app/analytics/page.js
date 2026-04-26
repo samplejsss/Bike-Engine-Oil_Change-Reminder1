@@ -10,7 +10,7 @@ import { buildFuelEntriesWithEfficiency, getRecentAverageKmpl } from "@/lib/fuel
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
-import VehicleLoader from "@/components/VehicleLoader";
+import PageLoader from "@/components/PageLoader";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
   if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <VehicleLoader />
+        <PageLoader variant="analytics" />
       </div>
     );
   }
