@@ -527,6 +527,7 @@ export default function DashboardPage() {
                     {/* Odometer Reading */}
                     <OdometerInput 
                       onRideAdded={refreshDashboardData} 
+                      mechanicPhone={mechanicPhone}
                       currentStats={{ totalKm, lastResetKm, oilChangeLimit: oilChangeInterval, lastOdometerReading, bikeId: activeBikeId }}
                     />
                  </div>

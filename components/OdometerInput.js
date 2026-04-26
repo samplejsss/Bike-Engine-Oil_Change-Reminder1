@@ -9,7 +9,7 @@ import { useActiveBike } from "@/hooks/useActiveBike";
 import toast from "react-hot-toast";
 import { playSuccessSound } from "@/hooks/useNotifications";
 
-export default function OdometerInput({ onRideAdded, currentStats }) {
+export default function OdometerInput({ onRideAdded, currentStats, mechanicPhone }) {
   const { user } = useAuth();
   const { activeBikeId } = useActiveBike();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -19,6 +19,80 @@ export default function OdometerInput({ onRideAdded, currentStats }) {
 
   const lastOdometerReading = currentStats?.lastOdometerReading || 0;
   const calculatedKm = newReading ? Math.max(0, parseFloat(newReading) - lastOdometerReading) : 0;
+
+  // To handle the daily automated message gatekeeper
+  const handleMessageTrigger = async (kmVal) => {
+    if (!mechanicPhone || !currentStats) return;
+
+    // We get limits straight from currentStats which should include them
+    const newTotal = currentStats.totalKm + kmVal;
+    const newSinceReset = newTotal - currentStats.lastResetKm;
+    const newRemaining = currentStats.oilChangeLimit - newSinceReset;
+    
+    // Evaluate daily limit
+    const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const lastDate = currentStats.lastMessageDate || "";
+    let count = currentStats.dailyMessageCount || 0;
+
+    if (lastDate !== todayStr) {
+      // New day, reset count
+      count = 0;
+    }
+
+    if (count >= 5) {
+      toast("Daily auto-message limit (5) reached.", { icon: "🚦" });
+      return;
+    }
+
+    const appUrl = typeof window !== "undefined" ? `${window.location.origin}/history` : "";
+    const details = [
+        `🏍️ *BikeCare Tracker Update*`,
+        `I just logged an odometer reading, adding *${kmVal.toFixed(1)} km*.`,
+        ``,
+        `📊 *Current Stats:*`,
+        `• Total KM Ridden: *${newTotal.toFixed(1)} km*`,
+        `• Oil Change Limit: *${currentStats.oilChangeLimit.toLocaleString()} km*`,
+        `• KM Since Last Change: *${(currentStats.totalKm - currentStats.lastResetKm + kmVal).toFixed(1)} km*`,
+        `• Oil Change Due In: *${newRemaining > 0 ? newRemaining.toFixed(1) + " km" : "OVERDUE ⚠️"}*`,
+        ``,
+        `📄 *Full Rides Report:*`,
+        appUrl ? `View & download report:\n${appUrl}` : `Open the BikeCare Tracker app > History tab.`,
+    ].join('\n');
+
+    const cleanPhone = mechanicPhone.replace(/\D/g, "");
+    if (cleanPhone) {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent || "");
+      const waUri = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(details)}`;
+      const smsUri = `sms:${cleanPhone}${isIOS ? '&' : '?'}body=${encodeURIComponent(details)}`;
+
+      const pref = currentStats.preferredMethod || "wa"; // 'wa' or 'sms'
+      try {
+        if (pref === "sms") {
+            const smsLink = document.createElement("a");
+            smsLink.href = smsUri;
+            smsLink.click();
+        } else {
+            window.open(waUri, "_blank");
+        }
+        
+        toast.success(`Auto-opened ${pref.toUpperCase()}!`);
+      } catch(e) { 
+        console.warn("App open failed", e); 
+        toast.error("Failed to open messaging app automatically.");
+      }
+
+      // Update counters in DB
+      try {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { 
+           dailyMessageCount: count + 1,
+           lastMessageDate: todayStr
+        });
+      } catch {
+        console.error("Failed to update message counts");
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,6 +160,9 @@ export default function OdometerInput({ onRideAdded, currentStats }) {
       if (onRideAdded) {
         setTimeout(() => onRideAdded(), 500);
       }
+
+      // Attempt smart message trigger
+      await handleMessageTrigger(kmRidden);
     } catch (err) {
       toast.error("Failed to add odometer reading. Try again.");
       console.error(err);
