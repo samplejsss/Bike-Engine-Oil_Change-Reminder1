@@ -6,8 +6,9 @@ import Navbar from "@/components/Navbar";
 import ServiceInput from "@/components/ServiceInput";
 import ServiceHistory from "@/components/ServiceHistory";
 import ExpenseBreakdown from "@/components/ExpenseBreakdown";
+import VehicleLoader from "@/components/VehicleLoader";
 import { useAuth } from "@/hooks/useAuth";
-import { Wrench, Loader2 } from "lucide-react";
+import { Wrench } from "lucide-react";
 
 export default function ServicesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -20,7 +21,7 @@ export default function ServicesPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={32} className="text-purple-400 animate-spin" />
+        <VehicleLoader />
       </div>
     );
   }

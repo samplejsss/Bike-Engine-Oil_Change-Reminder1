@@ -7,6 +7,7 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveBike } from "@/hooks/useActiveBike";
 import Navbar from "@/components/Navbar";
+import VehicleLoader from "@/components/VehicleLoader";
 import { Calendar, Clock, Bike, Loader2, Edit2, Trash2, Check, X as XIcon, History as HistoryIcon, Download } from "lucide-react";
 import CalendarComponent from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -302,12 +303,7 @@ export default function HistoryPage() {
   if (authLoading || bikeLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl btn-glow flex items-center justify-center">
-            <HistoryIcon size={24} className="text-white" />
-          </div>
-          <Loader2 size={24} className="text-purple-400 animate-spin" />
-        </div>
+        <VehicleLoader />
       </div>
     );
   }

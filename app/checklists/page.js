@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import MaintenanceChecklist from "@/components/MaintenanceChecklist";
+import VehicleLoader from "@/components/VehicleLoader";
 import { useAuth } from "@/hooks/useAuth";
 import { CheckSquare, Loader2 } from "lucide-react";
 
@@ -18,7 +19,7 @@ export default function ChecklistsPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 size={32} className="text-purple-400 animate-spin" />
+        <VehicleLoader />
       </div>
     );
   }
